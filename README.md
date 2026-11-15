@@ -2,6 +2,8 @@
 
 Vexim is a small, explicitly typed hardware description language. The Rust compiler, `veximc`, checks `.vxm` files, builds a typed internal representation, and emits synthesizable SystemVerilog.
 
+The [language specification](SPEC.md) describes the syntax, width rules, and register behavior with complete examples.
+
 ```sh
 cargo run -- check examples/adder.vxm
 cargo run -- build examples/adder.vxm -o adder.sv
