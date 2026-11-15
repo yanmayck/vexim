@@ -14,4 +14,5 @@ jobs:
           mkdir build
           cargo run --locked -- build examples/adder.vxm -o build/adder.sv
           cargo run --locked -- build examples/register.vxm -o build/register_demo.sv
+          cargo run --locked -- build examples/uart_tx.vxm -o build/uart_tx.sv
           sh tests/hdl.sh

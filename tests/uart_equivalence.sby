@@ -1,0 +1,16 @@
+[options]
+mode bmc
+depth 85
+
+[engines]
+smtbmc z3
+
+[script]
+read -formal -sv generated.sv reference.sv uart_equivalence.sv
+prep -top uart_equivalence -flatten
+opt -full
+
+[files]
+generated.sv build/uart_tx.sv
+reference.sv build/uart_tx_reference.sv
+tests/uart_equivalence.sv

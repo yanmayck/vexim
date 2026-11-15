@@ -31,22 +31,28 @@ struct Signal {
 }
 
 enum Operation {
+    Constant(u64),
     Copy(usize),
     ZeroExtend(usize),
+    Slice(usize, u8, u8),
+    Concat(usize, usize),
     Binary(&'static str, usize, usize),
+    Mux(usize, usize, usize),
     Register {
         clock: usize,
         reset: usize,
         data: usize,
+        reset_value: u64,
     },
 }
 
 impl Operation {
     fn combinational_inputs(&self) -> Vec<usize> {
         match *self {
-            Self::Copy(a) | Self::ZeroExtend(a) => vec![a],
-            Self::Binary(_, a, b) => vec![a, b],
-            Self::Register { .. } => vec![],
+            Self::Copy(a) | Self::ZeroExtend(a) | Self::Slice(a, _, _) => vec![a],
+            Self::Binary(_, a, b) | Self::Concat(a, b) => vec![a, b],
+            Self::Mux(select, a, b) => vec![select, a, b],
+            Self::Constant(_) | Self::Register { .. } => vec![],
         }
     }
 }
@@ -69,6 +75,13 @@ fn identifier(name: &str) -> bool {
         .next()
         .is_some_and(|c| c.is_ascii_alphabetic() || c == b'_')
         && chars.all(|c| c.is_ascii_alphanumeric() || c == b'_')
+}
+
+fn decimal(token: &str) -> Option<u64> {
+    if token.is_empty() || !token.bytes().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    token.parse().ok()
 }
 
 /// Parse and validate a single module.
@@ -172,7 +185,13 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
             }
             Ok(index)
         };
+        let literal = |token| {
+            decimal(token)
+                .filter(|&value| width == 64 || value < (1_u64 << width))
+                .ok_or_else(|| error(&format!("expected a decimal literal that fits u{width}")))
+        };
         let operation = match tokens.as_slice() {
+            ["comb", _, "const", value] => Operation::Constant(literal(value)?),
             ["comb", _, "copy", a] => Operation::Copy(matching(a, width)?),
             ["comb", _, "zext", a] => {
                 let index = lookup(a)?;
@@ -181,6 +200,42 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
                 }
                 Operation::ZeroExtend(index)
             }
+            ["comb", _, "slice", source, msb, lsb] => {
+                let source = lookup(source)?;
+                let index = |token| {
+                    decimal(token)
+                        .filter(|&bit| bit < u64::from(signals[source].width))
+                        .map(|bit| bit as u8)
+                        .ok_or_else(|| error("slice index outside source width"))
+                };
+                let (msb, lsb) = (index(msb)?, index(lsb)?);
+                if msb < lsb || msb - lsb + 1 != width {
+                    return Err(error(
+                        "slice bounds must be descending and match destination width",
+                    ));
+                }
+                Operation::Slice(source, msb, lsb)
+            }
+            ["comb", _, "concat", a, b] => {
+                let (a, b) = (lookup(a)?, lookup(b)?);
+                if u16::from(signals[a].width) + u16::from(signals[b].width) != u16::from(width) {
+                    return Err(error("concatenation must match destination width"));
+                }
+                Operation::Concat(a, b)
+            }
+            ["comb", _, op @ ("eq" | "ne"), a, b] => {
+                if width != 1 {
+                    return Err(error("comparison requires a u1 destination"));
+                }
+                let a = lookup(a)?;
+                let b = matching(b, signals[a].width)?;
+                Operation::Binary(if *op == "eq" { "==" } else { "!=" }, a, b)
+            }
+            ["comb", _, "mux", select, a, b] => Operation::Mux(
+                matching(select, 1)?,
+                matching(a, width)?,
+                matching(b, width)?,
+            ),
             ["comb", _, op, a, b] => {
                 let symbol = match *op {
                     "add" => "+",
@@ -192,7 +247,7 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
                 };
                 Operation::Binary(symbol, matching(a, width)?, matching(b, width)?)
             }
-            ["sync", _, clock, reset, data] => {
+            ["sync", _, clock, reset, data, rest @ ..] if rest.len() <= 1 => {
                 let clock = matching(clock, 1)?;
                 let reset = matching(reset, 1)?;
                 if signals[clock].direction != Direction::Input
@@ -204,6 +259,11 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
                     clock,
                     reset,
                     data: matching(data, width)?,
+                    reset_value: rest
+                        .first()
+                        .map(|value| literal(value))
+                        .transpose()?
+                        .unwrap_or(0),
                 }
             }
             _ => return Err(error("invalid driver syntax")),
@@ -307,16 +367,29 @@ impl Module {
                 continue;
             };
             let target = signal(i);
+            let width = self.signals[i].width;
             writeln!(out, "  // Vexim line {}", driver.line).unwrap();
             match driver.operation {
+                Operation::Constant(value) => writeln!(out, "  assign {target}= {width}'d{value};"),
                 Operation::Copy(a) => writeln!(out, "  assign {target}= {};", signal(a)),
+                Operation::Slice(a, msb, lsb) => {
+                    if self.signals[a].width == 1 {
+                        writeln!(out, "  assign {target}= {};", signal(a))
+                    } else if msb == lsb {
+                        writeln!(out, "  assign {target}= {}[{msb}];", signal(a))
+                    } else {
+                        writeln!(out, "  assign {target}= {}[{msb}:{lsb}];", signal(a))
+                    }
+                }
+                Operation::Concat(a, b) => writeln!(out, "  assign {target}= {{{}, {}}};", signal(a), signal(b)),
+                Operation::Mux(select, a, b) => writeln!(out, "  assign {target}= {}? {}: {};", signal(select), signal(a), signal(b)),
                 Operation::ZeroExtend(a) => {
                     let gap = self.signals[i].width - self.signals[a].width;
                     writeln!(out, "  assign {target}= {{{gap}'d0, {}}};", signal(a))
                 }
                 Operation::Binary(op, a, b) => writeln!(out, "  assign {target}= {}{op} {};", signal(a), signal(b)),
-                Operation::Register { clock, reset, data } => writeln!(out,
-                    "  always_ff @(posedge {}) begin\n    if ({}) {target}<= '0;\n    else {target}<= {};\n  end",
+                Operation::Register { clock, reset, data, reset_value } => writeln!(out,
+                    "  always_ff @(posedge {}) begin\n    if ({}) {target}<= {width}'d{reset_value};\n    else {target}<= {};\n  end",
                     signal(clock), signal(reset), signal(data)),
             }.unwrap();
         }

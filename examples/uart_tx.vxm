@@ -1,0 +1,70 @@
+module uart_tx
+input clk u1
+input rst u1
+input start u1
+input data u8
+output tx u1
+output busy u1
+
+wire zero u1
+wire one u1
+wire zero_ticks u2
+wire one_tick u2
+wire last_tick u2
+wire zero_bits u4
+wire one_bit u4
+wire frame_bits u4
+comb zero const 0
+comb one const 1
+comb zero_ticks const 0
+comb one_tick const 1
+comb last_tick const 3
+comb zero_bits const 0
+comb one_bit const 1
+comb frame_bits const 10
+
+wire ticks u2
+wire bits u4
+wire frame u10
+wire next_ticks u2
+wire next_bits u4
+wire next_frame u10
+sync ticks clk rst next_ticks
+sync bits clk rst next_bits
+sync frame clk rst next_frame 1023
+
+wire tx_bit u1
+wire accept u1
+wire tick_done u1
+wire advance u1
+comb busy ne bits zero_bits
+comb tx_bit slice frame 0 0
+comb tx mux busy tx_bit one
+comb accept mux busy zero start
+comb tick_done eq ticks last_tick
+comb advance and busy tick_done
+
+wire ticks_inc u2
+wire ticks_active u2
+comb ticks_inc add ticks one_tick
+comb ticks_active mux busy ticks_inc ticks
+comb next_ticks mux accept zero_ticks ticks_active
+
+wire bits_dec u4
+wire bits_active u4
+comb bits_dec sub bits one_bit
+comb bits_active mux advance bits_dec bits
+comb next_bits mux accept frame_bits bits_active
+
+wire payload u9
+wire loaded_frame u10
+wire frame_tail u9
+wire shifted_frame u10
+wire frame_active u10
+comb payload concat data zero
+comb loaded_frame concat one payload
+comb frame_tail slice frame 9 1
+comb shifted_frame concat one frame_tail
+comb frame_active mux advance shifted_frame frame
+comb next_frame mux accept loaded_frame frame_active
+end
