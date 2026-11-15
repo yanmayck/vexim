@@ -1,0 +1,10 @@
+module adder
+input a u8
+input b u8
+output sum u9
+wire a_wide u9
+wire b_wide u9
+comb a_wide zext a
+comb b_wide zext b
+comb sum add a_wide b_wide
+end

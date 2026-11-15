@@ -1,0 +1,326 @@
+use std::{
+    collections::{BTreeMap, VecDeque},
+    fmt,
+    fmt::Write,
+};
+
+#[derive(Debug)]
+pub struct Diagnostic {
+    pub line: usize,
+    pub message: String,
+}
+
+impl fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.line, self.message)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Direction {
+    Input,
+    Output,
+    Wire,
+}
+
+struct Signal {
+    name: String,
+    width: u8,
+    direction: Direction,
+    line: usize,
+}
+
+enum Operation {
+    Copy(usize),
+    ZeroExtend(usize),
+    Binary(&'static str, usize, usize),
+    Register {
+        clock: usize,
+        reset: usize,
+        data: usize,
+    },
+}
+
+impl Operation {
+    fn combinational_inputs(&self) -> Vec<usize> {
+        match *self {
+            Self::Copy(a) | Self::ZeroExtend(a) => vec![a],
+            Self::Binary(_, a, b) => vec![a, b],
+            Self::Register { .. } => vec![],
+        }
+    }
+}
+
+struct Driver {
+    operation: Operation,
+    line: usize,
+}
+
+/// Validated Vexim hardware IR. Names are resolved to signal indices.
+pub struct Module {
+    name: String,
+    signals: Vec<Signal>,
+    drivers: Vec<Option<Driver>>,
+}
+
+fn identifier(name: &str) -> bool {
+    let mut chars = name.bytes();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == b'_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == b'_')
+}
+
+/// Parse and validate a single module.
+pub fn parse(source: &str) -> Result<Module, Diagnostic> {
+    let mut name = None;
+    let mut signals = Vec::new();
+    let mut names = BTreeMap::new();
+    let mut statements = Vec::new();
+    let mut ended = false;
+    let mut last_line = 1;
+    for (index, text) in source.lines().enumerate() {
+        let line = index + 1;
+        last_line = line;
+        let tokens: Vec<_> = text
+            .split('#')
+            .next()
+            .unwrap_or("")
+            .split_whitespace()
+            .collect();
+        if tokens.is_empty() {
+            continue;
+        }
+        let error = |message: &str| Diagnostic {
+            line,
+            message: message.into(),
+        };
+        if ended {
+            return Err(error("unexpected content after end"));
+        }
+        if name.is_none() {
+            match tokens.as_slice() {
+                ["module", id] if identifier(id) => name = Some((*id).to_owned()),
+                _ => return Err(error("expected module NAME")),
+            }
+            continue;
+        }
+        match tokens.as_slice() {
+            [kind @ ("input" | "output" | "wire"), id, ty] => {
+                if !identifier(id) {
+                    return Err(error("invalid signal name"));
+                }
+                if names.contains_key(id) {
+                    return Err(error("duplicate signal name"));
+                }
+                let width = ty
+                    .strip_prefix('u')
+                    .and_then(|n| n.parse::<u8>().ok())
+                    .filter(|n| (1..=64).contains(n))
+                    .ok_or_else(|| error("expected unsigned width u1 through u64"))?;
+                let direction = match *kind {
+                    "input" => Direction::Input,
+                    "output" => Direction::Output,
+                    _ => Direction::Wire,
+                };
+                names.insert(*id, signals.len());
+                signals.push(Signal {
+                    name: (*id).into(),
+                    width,
+                    direction,
+                    line,
+                });
+            }
+            ["comb" | "sync", ..] => statements.push((line, tokens)),
+            ["end"] => ended = true,
+            _ => return Err(error("expected a declaration, driver, or end")),
+        }
+    }
+    if !ended {
+        return Err(Diagnostic {
+            line: last_line,
+            message: "expected module ending in end".into(),
+        });
+    }
+    let mut drivers: Vec<Option<Driver>> = (0..signals.len()).map(|_| None).collect();
+    for (line, tokens) in statements {
+        let error = |message: &str| Diagnostic {
+            line,
+            message: message.into(),
+        };
+        let lookup = |id: &str| {
+            names
+                .get(id)
+                .copied()
+                .ok_or_else(|| error(&format!("unknown signal {id}")))
+        };
+        let Some(target) = tokens.get(1) else {
+            return Err(error("expected a destination"));
+        };
+        let target = lookup(target)?;
+        if signals[target].direction == Direction::Input || drivers[target].is_some() {
+            return Err(error("destination is an input or already has a driver"));
+        }
+        let width = signals[target].width;
+        let matching = |id: &str, expected| {
+            let index = lookup(id)?;
+            if signals[index].width != expected {
+                return Err(error(&format!(
+                    "{id} has width u{}, expected u{expected}",
+                    signals[index].width
+                )));
+            }
+            Ok(index)
+        };
+        let operation = match tokens.as_slice() {
+            ["comb", _, "copy", a] => Operation::Copy(matching(a, width)?),
+            ["comb", _, "zext", a] => {
+                let index = lookup(a)?;
+                if signals[index].width >= width {
+                    return Err(error("zext requires a wider destination"));
+                }
+                Operation::ZeroExtend(index)
+            }
+            ["comb", _, op, a, b] => {
+                let symbol = match *op {
+                    "add" => "+",
+                    "sub" => "-",
+                    "and" => "&",
+                    "or" => "|",
+                    "xor" => "^",
+                    _ => return Err(error("unknown binary operation")),
+                };
+                Operation::Binary(symbol, matching(a, width)?, matching(b, width)?)
+            }
+            ["sync", _, clock, reset, data] => {
+                let clock = matching(clock, 1)?;
+                let reset = matching(reset, 1)?;
+                if signals[clock].direction != Direction::Input
+                    || signals[reset].direction != Direction::Input
+                {
+                    return Err(error("clock and reset must be module inputs"));
+                }
+                Operation::Register {
+                    clock,
+                    reset,
+                    data: matching(data, width)?,
+                }
+            }
+            _ => return Err(error("invalid driver syntax")),
+        };
+        drivers[target] = Some(Driver { operation, line });
+    }
+    for (signal, driver) in signals.iter().zip(&drivers) {
+        if signal.direction != Direction::Input && driver.is_none() {
+            return Err(Diagnostic {
+                line: signal.line,
+                message: format!("undriven signal {}", signal.name),
+            });
+        }
+    }
+    let module = Module {
+        name: name.expect("module header before end"),
+        signals,
+        drivers,
+    };
+    module.check_cycles()?;
+    Ok(module)
+}
+
+impl Module {
+    fn check_cycles(&self) -> Result<(), Diagnostic> {
+        let mut dependents = vec![Vec::new(); self.signals.len()];
+        let mut pending = vec![0; self.signals.len()];
+        for (target, driver) in self.drivers.iter().enumerate() {
+            if let Some(driver) = driver {
+                for input in driver.operation.combinational_inputs() {
+                    dependents[input].push(target);
+                    pending[target] += 1;
+                }
+            }
+        }
+        let mut queue: VecDeque<_> = (0..pending.len()).filter(|&i| pending[i] == 0).collect();
+        while let Some(signal) = queue.pop_front() {
+            for &dependent in &dependents[signal] {
+                pending[dependent] -= 1;
+                if pending[dependent] == 0 {
+                    queue.push_back(dependent);
+                }
+            }
+        }
+        if let Some(index) = pending.iter().position(|&count| count != 0) {
+            let signal = &self.signals[index];
+            let line = self.drivers[index]
+                .as_ref()
+                .map_or(signal.line, |driver| driver.line);
+            return Err(Diagnostic {
+                line,
+                message: format!("combinational cycle feeds {}", signal.name),
+            });
+        }
+        Ok(())
+    }
+
+    /// Emit synthesizable SystemVerilog with a source line comment for each driver.
+    pub fn system_verilog(&self) -> String {
+        fn escaped(name: &str) -> String {
+            format!("\\{name} ")
+        }
+        fn range(width: u8) -> String {
+            if width == 1 {
+                String::new()
+            } else {
+                format!("[{}:0] ", width - 1)
+            }
+        }
+        let signal = |i: usize| escaped(&self.signals[i].name);
+        let ports: Vec<_> = self
+            .signals
+            .iter()
+            .filter_map(|s| {
+                let direction = match s.direction {
+                    Direction::Input => "input",
+                    Direction::Output => "output",
+                    Direction::Wire => return None,
+                };
+                Some(format!(
+                    "  {direction} logic {}{}",
+                    range(s.width),
+                    escaped(&s.name)
+                ))
+            })
+            .collect();
+        let mut out = format!(
+            "module {}(\n{}\n);\n",
+            escaped(&self.name),
+            ports.join(",\n")
+        );
+        for s in self
+            .signals
+            .iter()
+            .filter(|s| s.direction == Direction::Wire)
+        {
+            writeln!(out, "  logic {}{};", range(s.width), escaped(&s.name)).unwrap();
+        }
+        for (i, driver) in self.drivers.iter().enumerate() {
+            let Some(driver) = driver else {
+                continue;
+            };
+            let target = signal(i);
+            writeln!(out, "  // Vexim line {}", driver.line).unwrap();
+            match driver.operation {
+                Operation::Copy(a) => writeln!(out, "  assign {target}= {};", signal(a)),
+                Operation::ZeroExtend(a) => {
+                    let gap = self.signals[i].width - self.signals[a].width;
+                    writeln!(out, "  assign {target}= {{{gap}'d0, {}}};", signal(a))
+                }
+                Operation::Binary(op, a, b) => writeln!(out, "  assign {target}= {}{op} {};", signal(a), signal(b)),
+                Operation::Register { clock, reset, data } => writeln!(out,
+                    "  always_ff @(posedge {}) begin\n    if ({}) {target}<= '0;\n    else {target}<= {};\n  end",
+                    signal(clock), signal(reset), signal(data)),
+            }.unwrap();
+        }
+        out.push_str("endmodule\n");
+        out
+    }
+}

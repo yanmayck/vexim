@@ -1,0 +1,7 @@
+module register_demo
+input clk u1
+input rst u1
+input data u8
+output q u8
+sync q clk rst data
+end
