@@ -52,7 +52,7 @@ The [RAM example](examples/ram.vxm) uses an indexed memory with an independent r
 ## Memory controller roadmap
 
 1. Validate indexed memories and parameter specialization in a small RAM using Icarus and Yosys.
-2. Add a controller example with a 40-bit byte address and an external memory interface. Model memory sparsely in the testbench and cover address aliasing, 4 KiB boundaries, partial writes, and backpressure.
+2. Use the [40-bit memory controller](examples/mem_controller.vxm) as a reference. The external-memory interface carries 64-bit beats and splits commands across 4 KiB boundaries.
 3. Give models the controller contract and verify their RTL with the same independent testbench. Measure acceptance, correction attempts, and generation time. Run a separate 1 GiB streaming test to measure sustained data integrity.
 
 The language and compiler are released under the [Apache License 2.0](LICENSE).

@@ -1,0 +1,168 @@
+module mem_controller
+input clk u1
+input rst u1
+input cmd_valid u1
+input cmd_write u1
+input cmd_addr u40
+input cmd_beats u8
+input w_valid u1
+input w_data u64
+input w_strb u8
+input r_ready u1
+input mem_ready u1
+input mem_w_ready u1
+input mem_r_valid u1
+input mem_r_data u64
+output cmd_ready u1
+output w_ready u1
+output r_valid u1
+output r_data u64
+output r_last u1
+output mem_valid u1
+output mem_write u1
+output mem_addr u40
+output mem_beats u8
+output mem_w_valid u1
+output mem_w_data u64
+output mem_w_strb u8
+output mem_r_ready u1
+output done u1
+
+# State and constant values
+wire zero u1
+comb zero const 0
+wire one u1
+comb one const 1
+wire one8 u8
+comb one8 const 1
+wire stride u40
+comb stride const 8
+wire page_words u10
+comb page_words const 512
+wire max_burst u10
+comb max_burst const 16
+wire active u1
+wire descriptor u1
+wire writing u1
+wire address u40
+wire remaining u8
+wire burst_left u8
+
+# Select the minimum of the remaining beats, page space, and burst limit.
+wire word_offset u9
+comb word_offset slice address 11 3
+wire word_offset_long u10
+comb word_offset_long zext word_offset
+wire page_left u10
+comb page_left sub page_words word_offset_long
+wire remaining_long u10
+comb remaining_long zext remaining
+wire bounded_remaining_a u11
+comb bounded_remaining_a zext remaining_long
+wire bounded_remaining_b u11
+comb bounded_remaining_b zext max_burst
+wire unused_bounded_remaining_delta u11
+comb unused_bounded_remaining_delta sub bounded_remaining_a bounded_remaining_b
+wire bounded_remaining_less u1
+comb bounded_remaining_less slice unused_bounded_remaining_delta 10 10
+wire bounded_remaining u10
+comb bounded_remaining mux bounded_remaining_less remaining_long max_burst
+wire burst_a u11
+comb burst_a zext bounded_remaining
+wire burst_b u11
+comb burst_b zext page_left
+wire unused_burst_delta u11
+comb unused_burst_delta sub burst_a burst_b
+wire burst_less u1
+comb burst_less slice unused_burst_delta 10 10
+wire unused_burst u10
+comb unused_burst mux burst_less bounded_remaining page_left
+comb mem_beats slice unused_burst 7 0
+
+# Only a descriptor or data transfer can advance an active command.
+wire enabled u1
+comb enabled xor rst one
+wire idle u1
+comb idle xor active one
+wire data_phase u1
+comb data_phase xor descriptor one
+wire live_data u1
+comb live_data and active data_phase
+wire transfer u1
+comb transfer and live_data enabled
+wire write_active u1
+comb write_active and transfer writing
+wire reading u1
+comb reading xor writing one
+wire read_active u1
+comb read_active and transfer reading
+comb cmd_ready and idle enabled
+comb mem_valid and descriptor enabled
+comb mem_addr copy address
+comb mem_write copy writing
+comb mem_w_valid and write_active w_valid
+comb w_ready and write_active mem_w_ready
+comb mem_w_data copy w_data
+comb mem_w_strb copy w_strb
+comb r_valid and read_active mem_r_valid
+comb r_data copy mem_r_data
+comb mem_r_ready and read_active r_ready
+wire last_command_beat u1
+comb last_command_beat eq remaining one8
+wire last_burst_beat u1
+comb last_burst_beat eq burst_left one8
+comb r_last and r_valid last_command_beat
+wire take_command u1
+comb take_command and cmd_ready cmd_valid
+wire take_descriptor u1
+comb take_descriptor and mem_valid mem_ready
+wire take_write u1
+comb take_write and mem_w_valid mem_w_ready
+wire take_read u1
+comb take_read and r_valid r_ready
+wire take_beat u1
+comb take_beat or take_read take_write
+comb done and take_beat last_command_beat
+
+# Commit counters and phase only when a handshake occurs.
+wire active_or_new u1
+comb active_or_new or active take_command
+wire active_next u1
+comb active_next mux done zero active_or_new
+wire burst_finished u1
+comb burst_finished and take_beat last_burst_beat
+wire open_descriptor u1
+comb open_descriptor or take_command burst_finished
+wire descriptor_hold u1
+comb descriptor_hold mux take_descriptor zero descriptor
+wire descriptor_pending u1
+comb descriptor_pending or open_descriptor descriptor_hold
+wire descriptor_next u1
+comb descriptor_next mux done zero descriptor_pending
+wire writing_next u1
+comb writing_next mux take_command cmd_write writing
+wire addr_increment u40
+comb addr_increment add address stride
+wire addr_hold u40
+comb addr_hold mux take_beat addr_increment address
+wire address_next u40
+comb address_next mux take_command cmd_addr addr_hold
+wire remaining_dec u8
+comb remaining_dec sub remaining one8
+wire remaining_hold u8
+comb remaining_hold mux take_beat remaining_dec remaining
+wire remaining_next u8
+comb remaining_next mux take_command cmd_beats remaining_hold
+wire burst_dec u8
+comb burst_dec sub burst_left one8
+wire burst_hold u8
+comb burst_hold mux take_beat burst_dec burst_left
+wire burst_next u8
+comb burst_next mux take_descriptor mem_beats burst_hold
+sync active clk rst active_next
+sync descriptor clk rst descriptor_next
+sync writing clk rst writing_next
+sync address clk rst address_next
+sync remaining clk rst remaining_next
+sync burst_left clk rst burst_next
+end

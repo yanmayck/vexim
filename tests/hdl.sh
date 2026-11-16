@@ -12,3 +12,4 @@ vvp build/ram-test
 yosys -Q -p 'read_verilog -sv build/ram_shallow.sv; synth -top ram; check -assert'
 iverilog -g2012 -DSHALLOW -s tb -o build/ram-shallow-test build/ram_shallow.sv tests/ram_tb.sv
 vvp build/ram-shallow-test
+yosys -Q -p 'read_verilog -sv build/mem_controller.sv; synth -top mem_controller; check -assert'
