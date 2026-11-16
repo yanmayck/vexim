@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     env, fs,
     io::{self, Write},
     process::ExitCode,
@@ -6,7 +7,7 @@ use std::{
 
 fn run() -> Result<(), String> {
     let args: Vec<_> = env::args_os().skip(1).collect();
-    let usage = "Usage: veximc check INPUT.vxm | veximc build INPUT.vxm [-o OUTPUT.sv]";
+    let usage = "Usage: veximc check INPUT.vxm [--param NAME=VALUE]...\n       veximc build INPUT.vxm [-o OUTPUT.sv] [--param NAME=VALUE]...";
     if args.len() == 1 && args[0] == "--help" {
         println!("{usage}");
         return Ok(());
@@ -15,15 +16,40 @@ fn run() -> Result<(), String> {
         println!("veximc {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
-    let (input, output, build) = match args.as_slice() {
-        [cmd, input] if cmd == "check" => (input, None, false),
-        [cmd, input] if cmd == "build" => (input, None, true),
-        [cmd, input, flag, output] if cmd == "build" && flag == "-o" => (input, Some(output), true),
+    let (input, flags, build) = match args.as_slice() {
+        [cmd, input, flags @ ..] if cmd == "check" => (input, flags, false),
+        [cmd, input, flags @ ..] if cmd == "build" => (input, flags, true),
         _ => return Err(usage.into()),
     };
+    let mut output = None;
+    let mut overrides = BTreeMap::new();
+    let mut flags = flags.iter();
+    while let Some(flag) = flags.next() {
+        let value = flags.next().ok_or(usage)?;
+        if flag == "-o" && build && output.is_none() {
+            output = Some(value);
+        } else if flag == "--param" {
+            let (name, number) = value
+                .to_str()
+                .and_then(|text| text.split_once('='))
+                .ok_or("expected --param NAME=VALUE")?;
+            let number = number
+                .bytes()
+                .all(|c| c.is_ascii_digit())
+                .then(|| number.parse::<u64>().ok())
+                .flatten()
+                .ok_or("parameter override must be an unsigned decimal integer")?;
+            if overrides.insert(name.to_owned(), number).is_some() {
+                return Err(format!("duplicate parameter override {name}"));
+            }
+        } else {
+            return Err(usage.into());
+        }
+    }
     let path = std::path::Path::new(input);
     let source = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let module = veximc::parse(&source).map_err(|e| format!("{}:{e}", path.display()))?;
+    let module = veximc::parse_with_parameters(&source, &overrides)
+        .map_err(|e| format!("{}:{e}", path.display()))?;
     if build {
         let sv = module.system_verilog();
         if let Some(output) = output {

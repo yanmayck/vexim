@@ -15,4 +15,6 @@ jobs:
           cargo run --locked -- build examples/adder.vxm -o build/adder.sv
           cargo run --locked -- build examples/register.vxm -o build/register_demo.sv
           cargo run --locked -- build examples/uart_tx.vxm -o build/uart_tx.sv
+          cargo run --locked -- build examples/ram.vxm -o build/ram.sv
+          cargo run --locked -- build examples/ram.vxm --param DEPTH=12 -o build/ram_shallow.sv
           sh tests/hdl.sh

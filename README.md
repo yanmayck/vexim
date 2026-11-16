@@ -24,7 +24,7 @@ comb sum add left right
 end
 ```
 
-Version 0.2 accepts one module per file, with `#` comments and one statement per line. Names may contain ASCII letters, digits, and underscores, and may not start with a digit.
+Version 0.3 accepts one module per file, with `#` comments and one statement per line. Names may contain ASCII letters, digits, and underscores, and may not start with a digit.
 
 - `input NAME uN`, `output NAME uN`, and `wire NAME uN` declare unsigned signals of 1 to 64 bits.
 - `comb DEST copy SRC` copies an equal-width signal. `zext` explicitly extends a narrower signal with zeros.
@@ -46,5 +46,13 @@ cargo run --locked -- build examples/uart_tx.vxm -o build/uart_tx.sv
 With a local RTL Forge checkout, run `sh tests/check_rtl_forge_uart.sh ../rtl-forge` using Icarus Verilog, Yosys, SymbiYosys, and Z3. This runs the original testbench and compares `tx` and `busy` against the original module for 84 cycles after the initial reset. The reference is read from the local checkout.
 
 The public compiler covers native Vexim input and SystemVerilog output. Legacy HDL import, cloud verification, and AI agents are planned for Vexim Cloud.
+
+The [RAM example](examples/ram.vxm) uses an indexed memory with an independent read address, an enabled synchronous write, and parameters resolved at compile time. Build the default 16-word RAM or specialize it to 12 words with `--param DEPTH=12`.
+
+## Memory controller roadmap
+
+1. Validate indexed memories and parameter specialization in a small RAM using Icarus and Yosys.
+2. Add a controller example with a 40-bit byte address and an external memory interface. Model memory sparsely in the testbench and cover address aliasing, 4 KiB boundaries, partial writes, and backpressure.
+3. Give models the controller contract and verify their RTL with the same independent testbench. Measure acceptance, correction attempts, and generation time. Run a separate 1 GiB streaming test to measure sustained data integrity.
 
 The language and compiler are released under the [Apache License 2.0](LICENSE).

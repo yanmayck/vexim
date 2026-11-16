@@ -1,0 +1,14 @@
+module ram
+param DEPTH 16
+param ADDR_BITS 4
+param WORD_BITS 8
+input clk u1
+input we u1
+input wr_addr uADDR_BITS
+input rd_addr uADDR_BITS
+input din uWORD_BITS
+output dout uWORD_BITS
+mem words uWORD_BITS DEPTH
+write words clk we wr_addr din
+comb dout read words rd_addr
+end

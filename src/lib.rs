@@ -38,6 +38,10 @@ enum Operation {
     Concat(usize, usize),
     Binary(&'static str, usize, usize),
     Mux(usize, usize, usize),
+    Read {
+        memory: usize,
+        address: usize,
+    },
     Register {
         clock: usize,
         reset: usize,
@@ -49,7 +53,10 @@ enum Operation {
 impl Operation {
     fn combinational_inputs(&self) -> Vec<usize> {
         match *self {
-            Self::Copy(a) | Self::ZeroExtend(a) | Self::Slice(a, _, _) => vec![a],
+            Self::Copy(a)
+            | Self::ZeroExtend(a)
+            | Self::Slice(a, _, _)
+            | Self::Read { address: a, .. } => vec![a],
             Self::Binary(_, a, b) | Self::Concat(a, b) => vec![a, b],
             Self::Mux(select, a, b) => vec![select, a, b],
             Self::Constant(_) | Self::Register { .. } => vec![],
@@ -62,11 +69,40 @@ struct Driver {
     line: usize,
 }
 
+struct Memory {
+    name: String,
+    width: u8,
+    depth: u32,
+    line: usize,
+    write: Option<MemoryWrite>,
+}
+
+impl Memory {
+    fn address_width(&self) -> u8 {
+        (u32::BITS - (self.depth - 1).leading_zeros()).max(1) as u8
+    }
+}
+
+fn memory_bound(memory: &Memory, address: &str) -> Option<String> {
+    let width = memory.address_width();
+    (u64::from(memory.depth) < (1_u64 << width))
+        .then(|| format!("{address}< {width}'d{}", memory.depth))
+}
+
+struct MemoryWrite {
+    clock: usize,
+    enable: usize,
+    address: usize,
+    data: usize,
+    line: usize,
+}
+
 /// Validated Vexim hardware IR. Names are resolved to signal indices.
 pub struct Module {
     name: String,
     signals: Vec<Signal>,
     drivers: Vec<Option<Driver>>,
+    memories: Vec<Memory>,
 }
 
 fn identifier(name: &str) -> bool {
@@ -86,9 +122,20 @@ fn decimal(token: &str) -> Option<u64> {
 
 /// Parse and validate a single module.
 pub fn parse(source: &str) -> Result<Module, Diagnostic> {
+    parse_with_parameters(source, &BTreeMap::new())
+}
+
+/// Parse and validate a module with compile-time parameter overrides.
+pub fn parse_with_parameters(
+    source: &str,
+    overrides: &BTreeMap<String, u64>,
+) -> Result<Module, Diagnostic> {
     let mut name = None;
     let mut signals = Vec::new();
     let mut names = BTreeMap::new();
+    let mut parameters = BTreeMap::new();
+    let mut memory_names = BTreeMap::new();
+    let mut memories: Vec<Memory> = Vec::new();
     let mut statements = Vec::new();
     let mut ended = false;
     let mut last_line = 1;
@@ -118,19 +165,50 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
             }
             continue;
         }
+        let unique_name = |id: &str| {
+            if !identifier(id) {
+                return Err(error("invalid declaration name"));
+            }
+            if names.contains_key(id)
+                || parameters.contains_key(id)
+                || memory_names.contains_key(id)
+            {
+                return Err(error("duplicate declaration name"));
+            }
+            Ok(())
+        };
+        let resolve = |token: &str| decimal(token).or_else(|| parameters.get(token).copied());
+        let width = |ty: &str| {
+            ty.strip_prefix('u')
+                .and_then(resolve)
+                .filter(|n| (1..=64).contains(n))
+                .map(|n| n as u8)
+                .ok_or_else(|| error("expected unsigned width u1 through u64 or uPARAM"))
+        };
         match tokens.as_slice() {
+            ["param", id, default] => {
+                unique_name(id)?;
+                let default = decimal(default)
+                    .ok_or_else(|| error("expected a decimal parameter default"))?;
+                parameters.insert(*id, overrides.get(*id).copied().unwrap_or(default));
+            }
+            ["mem", id, ty, depth] => {
+                unique_name(id)?;
+                let depth = resolve(depth)
+                    .filter(|n| (1..=2_147_483_647).contains(n))
+                    .ok_or_else(|| error("memory depth must be between 1 and 2147483647"))?;
+                memory_names.insert(*id, memories.len());
+                memories.push(Memory {
+                    name: (*id).into(),
+                    width: width(ty)?,
+                    depth: depth as u32,
+                    line,
+                    write: None,
+                });
+            }
             [kind @ ("input" | "output" | "wire"), id, ty] => {
-                if !identifier(id) {
-                    return Err(error("invalid signal name"));
-                }
-                if names.contains_key(id) {
-                    return Err(error("duplicate signal name"));
-                }
-                let width = ty
-                    .strip_prefix('u')
-                    .and_then(|n| n.parse::<u8>().ok())
-                    .filter(|n| (1..=64).contains(n))
-                    .ok_or_else(|| error("expected unsigned width u1 through u64"))?;
+                unique_name(id)?;
+                let width = width(ty)?;
                 let direction = match *kind {
                     "input" => Direction::Input,
                     "output" => Direction::Output,
@@ -144,7 +222,7 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
                     line,
                 });
             }
-            ["comb" | "sync", ..] => statements.push((line, tokens)),
+            ["comb" | "sync" | "write", ..] => statements.push((line, tokens)),
             ["end"] => ended = true,
             _ => return Err(error("expected a declaration, driver, or end")),
         }
@@ -153,6 +231,15 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
         return Err(Diagnostic {
             line: last_line,
             message: "expected module ending in end".into(),
+        });
+    }
+    if let Some(unknown) = overrides
+        .keys()
+        .find(|name| !parameters.contains_key(name.as_str()))
+    {
+        return Err(Diagnostic {
+            line: 1,
+            message: format!("unknown parameter {unknown}"),
         });
     }
     let mut drivers: Vec<Option<Driver>> = (0..signals.len()).map(|_| None).collect();
@@ -167,14 +254,6 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
                 .copied()
                 .ok_or_else(|| error(&format!("unknown signal {id}")))
         };
-        let Some(target) = tokens.get(1) else {
-            return Err(error("expected a destination"));
-        };
-        let target = lookup(target)?;
-        if signals[target].direction == Direction::Input || drivers[target].is_some() {
-            return Err(error("destination is an input or already has a driver"));
-        }
-        let width = signals[target].width;
         let matching = |id: &str, expected| {
             let index = lookup(id)?;
             if signals[index].width != expected {
@@ -185,12 +264,58 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
             }
             Ok(index)
         };
+        let memory_index = |id: &str| {
+            memory_names
+                .get(id)
+                .copied()
+                .ok_or_else(|| error(&format!("unknown memory {id}")))
+        };
+        if let ["write", memory, clock, enable, address, data] = tokens.as_slice() {
+            let memory = &mut memories[memory_index(memory)?];
+            if memory.write.is_some() {
+                return Err(error("memory already has a write port"));
+            }
+            let clock = matching(clock, 1)?;
+            if signals[clock].direction != Direction::Input {
+                return Err(error("memory clock must be a module input"));
+            }
+            memory.write = Some(MemoryWrite {
+                clock,
+                enable: matching(enable, 1)?,
+                address: matching(address, memory.address_width())?,
+                data: matching(data, memory.width)?,
+                line,
+            });
+            continue;
+        }
+        if tokens[0] == "write" {
+            return Err(error("expected write MEMORY CLOCK ENABLE ADDRESS DATA"));
+        }
+        let Some(target) = tokens.get(1) else {
+            return Err(error("expected a destination"));
+        };
+        let target = lookup(target)?;
+        if signals[target].direction == Direction::Input || drivers[target].is_some() {
+            return Err(error("destination is an input or already has a driver"));
+        }
+        let width = signals[target].width;
         let literal = |token| {
             decimal(token)
                 .filter(|&value| width == 64 || value < (1_u64 << width))
                 .ok_or_else(|| error(&format!("expected a decimal literal that fits u{width}")))
         };
         let operation = match tokens.as_slice() {
+            ["comb", _, "read", memory, address] => {
+                let memory = memory_index(memory)?;
+                let declaration = &memories[memory];
+                if declaration.width != width {
+                    return Err(error("read destination width must match memory word width"));
+                }
+                Operation::Read {
+                    memory,
+                    address: matching(address, declaration.address_width())?,
+                }
+            }
             ["comb", _, "const", value] => Operation::Constant(literal(value)?),
             ["comb", _, "copy", a] => Operation::Copy(matching(a, width)?),
             ["comb", _, "zext", a] => {
@@ -270,6 +395,12 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
         };
         drivers[target] = Some(Driver { operation, line });
     }
+    if let Some(memory) = memories.iter().find(|memory| memory.write.is_none()) {
+        return Err(Diagnostic {
+            line: memory.line,
+            message: format!("memory {} has no write port", memory.name),
+        });
+    }
     for (signal, driver) in signals.iter().zip(&drivers) {
         if signal.direction != Direction::Input && driver.is_none() {
             return Err(Diagnostic {
@@ -282,6 +413,7 @@ pub fn parse(source: &str) -> Result<Module, Diagnostic> {
         name: name.expect("module header before end"),
         signals,
         drivers,
+        memories,
     };
     module.check_cycles()?;
     Ok(module)
@@ -362,6 +494,26 @@ impl Module {
         {
             writeln!(out, "  logic {}{};", range(s.width), escaped(&s.name)).unwrap();
         }
+        for memory in &self.memories {
+            let name = escaped(&memory.name);
+            writeln!(
+                out,
+                "  logic {}{name}[0:{}];",
+                range(memory.width),
+                memory.depth - 1
+            )
+            .unwrap();
+            let write = memory.write.as_ref().expect("validated memory write port");
+            let address = signal(write.address);
+            let enable = signal(write.enable);
+            let mut condition = enable.clone();
+            if let Some(bound) = memory_bound(memory, &address) {
+                condition = format!("{enable}&& ({bound})");
+            }
+            writeln!(out,
+                "  // Vexim line {}\n  always_ff @(posedge {}) begin\n    if ({condition}) {name}[{address}] <= {};\n  end",
+                write.line, signal(write.clock), signal(write.data)).unwrap();
+        }
         for (i, driver) in self.drivers.iter().enumerate() {
             let Some(driver) = driver else {
                 continue;
@@ -370,6 +522,16 @@ impl Module {
             let width = self.signals[i].width;
             writeln!(out, "  // Vexim line {}", driver.line).unwrap();
             match driver.operation {
+                Operation::Read { memory, address } => {
+                    let memory = &self.memories[memory];
+                    let address = signal(address);
+                    let word = format!("{}[{address}]", escaped(&memory.name));
+                    if let Some(bound) = memory_bound(memory, &address) {
+                        writeln!(out, "  assign {target}= ({bound}) ? {word} : {width}'d0;")
+                    } else {
+                        writeln!(out, "  assign {target}= {word};")
+                    }
+                }
                 Operation::Constant(value) => writeln!(out, "  assign {target}= {width}'d{value};"),
                 Operation::Copy(a) => writeln!(out, "  assign {target}= {};", signal(a)),
                 Operation::Slice(a, msb, lsb) => {

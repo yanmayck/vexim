@@ -1,5 +1,56 @@
 use veximc::parse;
 
+const RAM: &str = include_str!("../examples/ram.vxm");
+
+#[test]
+fn rejects_invalid_memory_ports_and_cycles() {
+    for (from, to, expected) in [
+        (
+            "input wr_addr uADDR_BITS",
+            "input wr_addr u3",
+            "expected u4",
+        ),
+        ("output dout uWORD_BITS", "output dout u4", "word width"),
+        (
+            "write words clk we wr_addr din",
+            "write words clk we wr_addr din\nwrite words clk we wr_addr din",
+            "already has a write port",
+        ),
+        ("write words clk we wr_addr din", "", "no write port"),
+        (
+            "comb dout read words rd_addr",
+            "wire loop_addr u4\ncomb dout read words loop_addr\ncomb loop_addr slice dout 3 0",
+            "combinational cycle",
+        ),
+    ] {
+        let error = parse(&RAM.replace(from, to)).err().expect(to);
+        assert!(error.message.contains(expected), "{error}");
+    }
+}
+
+#[test]
+fn validates_parameter_overrides_before_emission() {
+    use std::collections::BTreeMap;
+    use veximc::parse_with_parameters;
+    for (name, value, expected) in [
+        ("DEPTH", 0, "memory depth"),
+        ("DEPTH", 32, "expected u5"),
+        ("WORD_BITS", 65, "unsigned width"),
+        ("MISSING", 1, "unknown parameter"),
+    ] {
+        let overrides = BTreeMap::from([(name.to_owned(), value)]);
+        let error = parse_with_parameters(RAM, &overrides)
+            .err()
+            .expect(expected);
+        assert!(error.message.contains(expected), "{error}");
+    }
+    assert!(parse_with_parameters(
+        RAM,
+        &BTreeMap::from([("DEPTH".to_owned(), 32), ("ADDR_BITS".to_owned(), 5)])
+    )
+    .is_ok());
+}
+
 #[test]
 fn rejects_implicit_widening() {
     let source = "module demo\ninput a u8\noutput b u9\ncomb b copy a\nend";
