@@ -1,0 +1,215 @@
+# Shared bus arbitration and bounded word-copy DMA.
+module soc_bus_dma
+input clk u1
+input rst u1
+input dcyc u1
+input dwe u1
+input daddr u32
+input wdata u32
+input dsel u4
+input set_src u1
+input set_dst u1
+input set_len u1
+input start u1
+input sram_read u32
+output dack u1
+output dma_ack u1
+output dma_busy u1
+output take_dma u1
+output request u1
+output addr u32
+output data u32
+output mask u4
+output wr u1
+output dma_src u32
+output dma_dst u32
+output dma_length u16
+wire one u1
+comb one const 1
+wire zero1 u1
+comb zero1 const 0
+wire zero2 u2
+comb zero2 const 0
+wire zero3 u3
+comb zero3 const 0
+wire zero18 u18
+comb zero18 const 0
+wire zero13 u13
+comb zero13 const 0
+wire one12 u12
+comb one12 const 1
+wire one13 u13
+comb one13 const 1
+wire limit u14
+comb limit const 4096
+wire full u4
+comb full const 15
+wire last_dma u1
+wire write_phase u1
+wire src_pos u12
+wire dst_pos u12
+wire remaining u13
+wire buffer u32
+wire idle u1
+comb idle eq remaining zero13
+wire no_cpu u1
+comb no_cpu xor dcyc one
+wire last_cpu u1
+comb last_cpu xor last_dma one
+wire prefer_dma u1
+comb prefer_dma or no_cpu last_cpu
+wire any_ack u1
+comb any_ack or dack dma_ack
+wire can_request u1
+comb can_request or rst any_ack
+wire not_blocked u1
+comb not_blocked xor can_request one
+wire any_request u1
+comb any_request or take_dma dcyc
+wire cpu_turn u1
+comb cpu_turn xor take_dma one
+wire next_dack u1
+comb next_dack and request cpu_turn
+wire next_dma_ack u1
+comb next_dma_ack and request take_dma
+wire next_last u1
+comb next_last mux request take_dma last_dma
+wire dma_index u12
+comb dma_index mux write_phase dst_pos src_pos
+wire byte_index u14
+comb byte_index concat dma_index zero2
+wire dma_byte_addr u32
+comb dma_byte_addr zext byte_index
+wire new_length u16
+comb new_length slice data 15 0
+wire config_src u1
+comb config_src and idle set_src
+wire config_dst u1
+comb config_dst and idle set_dst
+wire config_len u1
+comb config_len and idle set_len
+wire next_config_src u32
+comb next_config_src mux config_src data dma_src
+wire next_config_dst u32
+comb next_config_dst mux config_dst data dma_dst
+wire next_config_len u16
+comb next_config_len mux config_len new_length dma_length
+wire len u13
+comb len slice dma_length 12 0
+wire len_high u3
+comb len_high slice dma_length 15 13
+wire len_fits u1
+comb len_fits eq len_high zero3
+wire len_nonzero u1
+comb len_nonzero ne len zero13
+wire start_bit u1
+comb start_bit slice data 0 0
+wire start_request u1
+comb start_request and start start_bit
+wire len_ok u1
+comb len_ok and len_fits len_nonzero
+wire len_wide u14
+comb len_wide zext len
+wire src_word u12
+comb src_word slice dma_src 13 2
+wire src_low u2
+comb src_low slice dma_src 1 0
+wire src_high u18
+comb src_high slice dma_src 31 14
+wire src_aligned u1
+comb src_aligned eq src_low zero2
+wire src_in_range u1
+comb src_in_range eq src_high zero18
+wire src_addr_ok u1
+comb src_addr_ok and src_aligned src_in_range
+wire src_wide u14
+comb src_wide zext src_word
+wire src_end_pos u14
+comb src_end_pos add src_wide len_wide
+wire src_margin u14
+comb src_margin sub limit src_end_pos
+wire src_too_far u1
+comb src_too_far slice src_margin 13 13
+wire src_room u1
+comb src_room xor src_too_far one
+wire src_valid u1
+comb src_valid and src_room src_addr_ok
+wire dst_word u12
+comb dst_word slice dma_dst 13 2
+wire dst_low u2
+comb dst_low slice dma_dst 1 0
+wire dst_high u18
+comb dst_high slice dma_dst 31 14
+wire dst_aligned u1
+comb dst_aligned eq dst_low zero2
+wire dst_in_range u1
+comb dst_in_range eq dst_high zero18
+wire dst_addr_ok u1
+comb dst_addr_ok and dst_aligned dst_in_range
+wire dst_wide u14
+comb dst_wide zext dst_word
+wire dst_end_pos u14
+comb dst_end_pos add dst_wide len_wide
+wire dst_margin u14
+comb dst_margin sub limit dst_end_pos
+wire dst_too_far u1
+comb dst_too_far slice dst_margin 13 13
+wire dst_room u1
+comb dst_room xor dst_too_far one
+wire dst_valid u1
+comb dst_valid and dst_room dst_addr_ok
+wire both_valid u1
+comb both_valid and src_valid dst_valid
+wire valid_transfer u1
+comb valid_transfer and len_ok both_valid
+wire is_start u1
+comb is_start and start_request idle
+wire load_positions u1
+comb load_positions and is_start valid_transfer
+wire not_write_phase u1
+comb not_write_phase xor write_phase one
+wire read_done u1
+comb read_done and dma_ack not_write_phase
+wire write_done u1
+comb write_done and dma_ack write_phase
+wire increment u12
+comb increment add dma_index one12
+wire advance_src u12
+comb advance_src mux read_done increment src_pos
+wire advance_dst u12
+comb advance_dst mux write_done increment dst_pos
+wire next_src u12
+comb next_src mux load_positions src_word advance_src
+wire next_dst u12
+comb next_dst mux load_positions dst_word advance_dst
+wire decrement u13
+comb decrement sub remaining one13
+wire advance_remaining u13
+comb advance_remaining mux write_done decrement remaining
+wire next_remaining u13
+comb next_remaining mux load_positions len advance_remaining
+wire phase_after_ack u1
+comb phase_after_ack xor write_phase dma_ack
+wire next_phase u1
+comb next_phase mux load_positions zero1 phase_after_ack
+wire next_buffer u32
+comb next_buffer mux read_done sram_read buffer
+comb dma_busy xor idle one
+comb take_dma and dma_busy prefer_dma
+comb request and any_request not_blocked
+comb addr mux take_dma dma_byte_addr daddr
+comb data mux take_dma buffer wdata
+comb mask mux take_dma full dsel
+comb wr mux take_dma write_phase dwe
+sync last_dma clk rst next_last
+sync dack clk rst next_dack
+sync dma_ack clk rst next_dma_ack
+sync dma_src clk rst next_config_src
+sync dma_dst clk rst next_config_dst
+sync dma_length clk rst next_config_len
+sync src_pos clk rst next_src
+sync dst_pos clk rst next_dst
+sync remaining clk rst next_remaining
+sync write_phase clk rst next_phase
+sync buffer clk rst next_buffer
+end

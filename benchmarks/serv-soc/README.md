@@ -99,3 +99,30 @@ docker run --rm --network none --mount "type=bind,source=$((Get-Location).Path)/
 
 The runner writes `up5k-results.json`, the synthesized netlist, and all
 five routing reports in `build/serv-soc-up5k`.
+
+## UP5K V2 with native Vexim arbitration and DMA
+
+This experiment runs both variants from the same checkout. The official
+SERV core, SPRAM adapters, firmware, peripherals, FPGA and five seeds
+are shared. V2 writes the data-bus arbitration and word-copy DMA in
+`bus_dma.vxm`. It uses 12-bit SRAM word indexes and one incrementer
+shared between the read and write phases. The MMIO registers retain
+their original widths. These are changes to the DMA design itself.
+
+| Metric | V1 SystemVerilog bus/DMA | V2 Vexim bus/DMA |
+|---|---:|---:|
+| Mapped LUT4s | 1,236 | 968 |
+| Packed logic cells | 1,535 | 1,258 |
+| Logic cells free | 70.9% | 76.2% |
+| SPRAM / EBR blocks used | 2 / 1 | 2 / 1 |
+| Boot cycles | 17,199 | 17,199 |
+| Fmax, seeds 1–5 (MHz) | 23.75, 23.62, 24.48, 24.55, 24.36 | 27.65, 25.78, 26.40, 26.33, 27.36 |
+| Median routed Fmax | 24.36 MHz | 26.40 MHz |
+| Seeds meeting 50 MHz | 0/5 | 0/5 |
+
+The V1 rerun retained the published resource counts. The earlier baseline
+checkout routed at 24.63 MHz median. The table uses the paired rerun.
+For V2, append `--v2` to the UP5K command above and use a separate output
+directory. Before booting the SoC, the runner tests DMA address and
+length boundaries, the last valid SRAM word, payload, and reset while
+a transfer is active.

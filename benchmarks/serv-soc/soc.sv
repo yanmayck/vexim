@@ -7,7 +7,12 @@ module serv_soc (
     wire [31:0] iaddr, daddr, wdata;
     wire [3:0] dsel;
     wire icyc, dcyc, dwe;
-    reg iack, dack, dma_ack;
+    reg iack;
+`ifdef VEXIM_BUS_DMA
+    wire dack, dma_ack;
+`else
+    reg dack, dma_ack;
+`endif
     reg [31:0] idata, mmio_read;
     reg read_sram;
     wire [31:0] rdata = read_sram ? sram_read : mmio_read;
@@ -52,6 +57,21 @@ module serv_soc (
     end
 
     localparam [31:0] IO = 32'h10000000;
+`ifdef VEXIM_BUS_DMA
+    wire [31:0] dma_src, dma_dst, addr, data;
+    wire [15:0] dma_length;
+    wire dma_busy, take_dma, request, wr;
+    wire [3:0] mask;
+    soc_bus_dma bus_dma (
+        .clk(clk), .rst(rst), .dcyc(dcyc), .dwe(dwe),
+        .daddr(daddr), .wdata(wdata), .dsel(dsel),
+        .set_src(io_write && addr == IO + 0), .set_dst(io_write && addr == IO + 4),
+        .set_len(io_write && addr == IO + 8), .start(io_write && addr == IO + 12),
+        .sram_read(sram_read), .dack(dack), .dma_ack(dma_ack), .dma_busy(dma_busy),
+        .take_dma(take_dma), .request(request), .addr(addr), .data(data),
+        .mask(mask), .wr(wr), .dma_src(dma_src), .dma_dst(dma_dst), .dma_length(dma_length)
+    );
+`else
     reg [31:0] dma_src, dma_dst, dma_address_src, dma_address_dst;
     reg [15:0] dma_length, dma_left;
     reg [31:0] dma_buffer;
@@ -67,6 +87,7 @@ module serv_soc (
     wire [31:0] data = take_dma ? dma_buffer : wdata;
     wire [3:0] mask = take_dma ? 4'hf : dsel;
     wire wr = take_dma ? dma_state == WRITE_WORD : dwe;
+`endif
     wire in_sram = addr[31:14] == 0;
     wire [11:0] word_index = addr[13:2];
     wire io_write = request && !take_dma && wr && mask == 4'hf;
@@ -116,14 +137,20 @@ module serv_soc (
 
     always @(posedge clk) begin
         if (rst) begin
+`ifndef VEXIM_BUS_DMA
             dack <= 0;
             dma_ack <= 0;
             last_dma <= 0;
+`endif
         end else begin
+`ifndef VEXIM_BUS_DMA
             dack <= request && !take_dma;
             dma_ack <= request && take_dma;
+`endif
             if (request) begin
+`ifndef VEXIM_BUS_DMA
                 last_dma <= take_dma;
+`endif
                 read_sram <= in_sram;
                 mmio_read <= read_value;
 `ifndef UP5K_SPRAM
@@ -142,11 +169,13 @@ module serv_soc (
 
     always @(posedge clk) begin
         if (rst) begin
+`ifndef VEXIM_BUS_DMA
             dma_src <= 0;
             dma_dst <= 0;
             dma_length <= 0;
             dma_left <= 0;
             dma_state <= IDLE;
+`endif
             timer_count <= 0;
             timer_compare <= 0;
             timer_enable <= 0;
@@ -175,6 +204,7 @@ module serv_soc (
                     spi_left <= spi_left-1;
                 end
             end
+`ifndef VEXIM_BUS_DMA
             if (dma_ack) begin
                 if (dma_state == READ_WORD) begin
                     dma_buffer <= sram_read;
@@ -186,8 +216,10 @@ module serv_soc (
                     dma_state <= dma_left == 1 ? IDLE : READ_WORD;
                 end
             end
+`endif
             if (io_write) begin
                 case (addr)
+`ifndef VEXIM_BUS_DMA
                     IO + 0: if (!dma_busy) dma_src <= data;
                     IO + 4: if (!dma_busy) dma_dst <= data;
                     IO + 8: if (!dma_busy) dma_length <= data[15:0];
@@ -201,6 +233,7 @@ module serv_soc (
                         dma_left <= dma_length;
                         dma_state <= READ_WORD;
                     end
+`endif
                     IO + 16: if (uart_left == 0) begin
                         uart_frame <= {1'b1,data[7:0],1'b0};
                         uart_left <= 10;

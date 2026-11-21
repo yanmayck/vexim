@@ -1,4 +1,5 @@
 """Measure the official SERV SoC baseline on the iCE40 UP5K."""
+import argparse
 import json
 import subprocess
 import sys
@@ -25,11 +26,25 @@ def run(args, label):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--v2", action="store_true", help="Use the native Vexim bus and DMA")
+    args = parser.parse_args()
     original = sorted(Path("/rtl").glob("*.v"))
     if not original:
         raise ValueError("mount the pinned official SERV sources at /rtl")
     boot_rom(OUT / "boot.hex")
     sources = ["-DUP5K_SPRAM", *map(str, original), str(HERE / "soc.sv")]
+    if args.v2:
+        bus_dma = OUT / "bus_dma.sv"
+        run(["veximc", "build", str(HERE / "bus_dma.vxm"), "-o", str(bus_dma)], "vexim-compile")
+        sources.insert(0, "-DVEXIM_BUS_DMA")
+        sources.append(str(bus_dma))
+        run(["iverilog", "-g2012", "-s", "dma_tb", "-o", "dma.sim",
+             str(bus_dma), str(HERE / "dma_tb.sv")], "dma-compile")
+        dma_test = run(["vvp", "dma.sim"], "dma-test")
+        if "PASS DMA" not in dma_test:
+            raise RuntimeError("native DMA boundary test failed")
+        print(dma_test.strip(), flush=True)
     model = "/usr/share/yosys/ice40/cells_sim.v"
     run(["iverilog", "-g2012", "-s", "tb", "-o", "up5k.sim", *sources, model,
          str(HERE / "tb.sv")], "up5k-compile")
