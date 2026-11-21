@@ -44,6 +44,10 @@ The [complete educational RV32 CPU benchmark](benchmarks/rv32/README.md)
 compares two Vexim register-bank designs against the same SystemVerilog
 reference over 20,000 simulated cycles and five routing seeds.
 
+The [ECP5 matrix accelerator benchmark](benchmarks/ecp5-gemm/README.md)
+scales to 144 signed INT8 processing elements and measures compiler
+resources, FPGA synthesis and routed timing.
+
 ## Write and compile hardware
 
 Install from source:

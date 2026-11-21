@@ -28,6 +28,34 @@ inside Docker. Wall time includes process startup and reading/writing the
 mounted directory. It also saves standalone synthesis time, per-seed
 resource utilization, post-route Fmax and text configuration files.
 
+## Measured results
+
+| Measure | Direct SystemVerilog | Vexim |
+|---|---:|---:|
+| Output values checked | 432/432 | 432/432 |
+| Standalone LUT4s | 6,557 | 6,557 |
+| Standalone flip-flops | 9,024 | 9,024 |
+| Post-pack combinational cells with harness | 11,767 | 11,767 |
+| DSP multipliers | 144 | 144 |
+| BRAM blocks | 0 | 0 |
+| Median routed Fmax | 58.03 MHz | 55.29 MHz |
+| Seeds meeting 75 MHz | 0/5 | 0/5 |
+
+| Seed | Direct Fmax (MHz) | Vexim Fmax (MHz) |
+|---|---:|---:|
+| 1 | 58.03 | 58.45 |
+| 2 | 57.39 | 50.69 |
+| 3 | 58.88 | 60.47 |
+| 4 | 43.97 | 55.29 |
+| 5 | 60.92 | 55.03 |
+
+Vexim compiled 6,449 lines in a median of
+67 ms across five runs,
+with a maximum peak RSS of 3.75 MiB.
+Both routed designs used 144 of the device's 156 multiplier blocks.
+The two median runs were limited by a route through the result readout
+into the harness capture register.
+
 ## Reproduce in PowerShell
 
 Run from the Vexim checkout:
