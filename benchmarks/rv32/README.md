@@ -29,7 +29,7 @@ establish RV32I compliance, unbounded equivalence or board performance.
 Yosys 0.33 synthesized the standalone top and then the same serial
 test harness around each variant. nextpnr 0.6 routed each harness on an
 iCE40 HX8K/CT256 for seeds 1–5. With the harness, synthesis can absorb
-output registers into the indexed register file and infer four RAM4K
+read-address registers into the indexed register file and infer four RAM4K
 blocks. The standalone synthesis does not infer those blocks. LUT4s and
 packed logic cells are different measures. Post-route timing includes
 the harness and excludes external board timing.
