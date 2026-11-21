@@ -26,8 +26,15 @@ module serv_soc (
     reg [7:0] sram2 [0:4095];
     reg [7:0] sram3 [0:4095];
 `endif
+`ifdef VEXIM_PERIPHERALS
+    wire [31:0] timer_count, timer_compare;
+    wire timer_enable;
+    wire timer_irq;
+`else
     reg [31:0] timer_count, timer_compare;
     reg timer_enable;
+    wire timer_irq = timer_enable && timer_count >= timer_compare;
+`endif
 
     initial $readmemh("boot.hex", rom);
 
@@ -38,7 +45,7 @@ module serv_soc (
     serv_rf_top cpu (
 `endif
         .clk(clk), .i_rst(rst),
-        .i_timer_irq(timer_enable && timer_count >= timer_compare),
+        .i_timer_irq(timer_irq),
         .o_ibus_adr(iaddr), .o_ibus_cyc(icyc),
         .i_ibus_rdt(idata), .i_ibus_ack(iack),
         .o_dbus_adr(daddr), .o_dbus_dat(wdata), .o_dbus_sel(dsel),
@@ -105,6 +112,34 @@ module serv_soc (
     end
 `endif
 
+`ifdef VEXIM_PERIPHERALS
+    wire uart_busy, uart_load, spi_busy;
+    wire [7:0] spi_rx, uart_byte;
+    soc_peripherals peripherals (
+        .clk(clk), .rst(rst), .data(data), .spi_miso(spi_miso),
+        .uart_start(io_write && addr == IO + 16),
+        .spi_start(io_write && addr == IO + 36),
+        .timer_set_compare(io_write && addr == IO + 28),
+        .timer_set_enable(io_write && addr == IO + 32),
+        .uart_byte(uart_byte), .uart_load(uart_load), .uart_tx(uart_tx), .uart_busy(uart_busy),
+        .spi_busy(spi_busy), .spi_cs_n(spi_cs_n), .spi_mosi(spi_mosi),
+        .spi_sck(spi_sck), .spi_rx(spi_rx), .timer_count(timer_count),
+        .timer_compare(timer_compare), .timer_enable(timer_enable), .timer_irq(timer_irq)
+    );
+`ifdef UART_EBR
+    wire [15:0] uart_ebr_data;
+    SB_RAM40_4K uart_buffer (
+        .RDATA(uart_ebr_data), .RCLK(clk), .RCLKE(uart_busy), .RE(1'b1),
+        .RADDR(11'd0), .WCLK(clk), .WCLKE(uart_load), .WE(1'b1), .WADDR(11'd0),
+        .MASK(16'h0000), .WDATA({8'd0,data[7:0]})
+    );
+    assign uart_byte = uart_ebr_data[7:0];
+`else
+    reg [7:0] uart_buffer;
+    always @(posedge clk) if (uart_load) uart_buffer <= data[7:0];
+    assign uart_byte = uart_buffer;
+`endif
+`else
     reg [9:0] uart_frame;
     reg [3:0] uart_left;
     reg [3:0] uart_div;
@@ -116,6 +151,9 @@ module serv_soc (
     assign spi_mosi = spi_tx[7];
     assign spi_sck = spi_clock;
     assign spi_cs_n = spi_left == 0;
+    wire uart_busy = uart_left != 0;
+    wire spi_busy = spi_left != 0;
+`endif
 
     reg [31:0] read_value;
     always @* begin
@@ -124,11 +162,11 @@ module serv_soc (
             IO + 4: read_value = dma_dst;
             IO + 8: read_value = {16'b0, dma_length};
             IO + 12: read_value = {31'b0, dma_busy};
-            IO + 20: read_value = {31'b0, uart_left != 0};
+            IO + 20: read_value = {31'b0, uart_busy};
             IO + 24: read_value = timer_count;
             IO + 28: read_value = timer_compare;
             IO + 32: read_value = {31'b0, timer_enable};
-            IO + 40: read_value = {31'b0, spi_left != 0};
+            IO + 40: read_value = {31'b0, spi_busy};
             IO + 44: read_value = {24'b0, spi_rx};
             IO + 48: read_value = signature;
             default: read_value = 0;
@@ -176,6 +214,7 @@ module serv_soc (
             dma_left <= 0;
             dma_state <= IDLE;
 `endif
+`ifndef VEXIM_PERIPHERALS
             timer_count <= 0;
             timer_compare <= 0;
             timer_enable <= 0;
@@ -186,8 +225,10 @@ module serv_soc (
             spi_clock <= 0;
             spi_tx <= 0;
             spi_rx <= 0;
+`endif
             signature <= 0;
         end else begin
+`ifndef VEXIM_PERIPHERALS
             timer_count <= timer_count+1;
             if (uart_left != 0) begin
                 if (uart_div == 7) begin
@@ -204,6 +245,7 @@ module serv_soc (
                     spi_left <= spi_left-1;
                 end
             end
+`endif
 `ifndef VEXIM_BUS_DMA
             if (dma_ack) begin
                 if (dma_state == READ_WORD) begin
@@ -234,6 +276,7 @@ module serv_soc (
                         dma_state <= READ_WORD;
                     end
 `endif
+`ifndef VEXIM_PERIPHERALS
                     IO + 16: if (uart_left == 0) begin
                         uart_frame <= {1'b1,data[7:0],1'b0};
                         uart_left <= 10;
@@ -246,6 +289,7 @@ module serv_soc (
                         spi_left <= 8;
                         spi_rx <= 0;
                     end
+`endif
                     IO + 48: signature <= data;
                     default: ;
                 endcase

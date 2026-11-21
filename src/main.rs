@@ -59,6 +59,7 @@ fn run() -> Result<(), String> {
         if opt_area {
             module.propagate_constants();
             module.share_operators();
+            module.narrow_widths();
         }
         let sv = module.system_verilog();
         if let Some(output) = output {

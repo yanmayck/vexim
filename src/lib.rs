@@ -37,6 +37,7 @@ enum Operation {
     Slice(usize, u8, u8),
     Concat(usize, usize),
     Binary(&'static str, usize, usize),
+    NarrowBinary(&'static str, usize, usize, u8),
     Mux(usize, usize, usize),
     SharedBinary {
         op: &'static str,
@@ -55,6 +56,7 @@ enum Operation {
         reset: usize,
         data: usize,
         reset_value: u64,
+        physical_width: Option<u8>,
     },
 }
 
@@ -65,7 +67,9 @@ impl Operation {
             | Self::ZeroExtend(a)
             | Self::Slice(a, _, _)
             | Self::Read { address: a, .. } => vec![a],
-            Self::Binary(_, a, b) | Self::Concat(a, b) => vec![a, b],
+            Self::Binary(_, a, b) | Self::NarrowBinary(_, a, b, _) | Self::Concat(a, b) => {
+                vec![a, b]
+            }
             Self::Mux(select, a, b) => vec![select, a, b],
             Self::SharedBinary {
                 select,
@@ -405,6 +409,7 @@ pub fn parse_with_parameters(
                         .map(|value| literal(value))
                         .transpose()?
                         .unwrap_or(0),
+                    physical_width: None,
                 }
             }
             _ => return Err(error("invalid driver syntax")),
@@ -550,7 +555,8 @@ impl Module {
                     .map(|_| 0),
                 Operation::Register { .. }
                 | Operation::Mux(..)
-                | Operation::SharedBinary { .. } => None,
+                | Operation::SharedBinary { .. }
+                | Operation::NarrowBinary(..) => None,
             };
             if let Some(value) = value {
                 let value = value & mask;
@@ -635,6 +641,69 @@ impl Module {
                 common,
                 common_first,
             };
+        }
+    }
+
+    /// Narrow arithmetic and registers with a provable unsigned upper bound.
+    pub fn narrow_widths(&mut self) {
+        fn mask(width: u8) -> u64 {
+            u64::MAX >> (64 - width)
+        }
+
+        let order = self
+            .combinational_order()
+            .expect("validated combinational graph");
+        let mut maximum = vec![0; self.signals.len()];
+        for index in order {
+            let width = self.signals[index].width;
+            let limit = mask(width);
+            let Some(driver) = &mut self.drivers[index] else {
+                maximum[index] = limit;
+                continue;
+            };
+            maximum[index] = match driver.operation {
+                Operation::Constant(value) => value,
+                Operation::Copy(a) | Operation::ZeroExtend(a) => maximum[a],
+                Operation::Slice(a, _, low) => (maximum[a] >> low).min(limit),
+                Operation::Concat(a, b) => (maximum[a] << self.signals[b].width) | maximum[b],
+                Operation::Mux(_, a, b) => maximum[a].max(maximum[b]),
+                Operation::Binary("&", a, b) => maximum[a].min(maximum[b]),
+                Operation::Binary(op @ ("+" | "*"), a, b) => {
+                    let bound = if op == "+" {
+                        maximum[a].saturating_add(maximum[b])
+                    } else {
+                        maximum[a].saturating_mul(maximum[b])
+                    };
+                    if bound < limit {
+                        let bits = (u64::BITS - bound.leading_zeros()).max(1) as u8;
+                        if bits < width {
+                            driver.operation = Operation::NarrowBinary(op, a, b, bits);
+                        }
+                    }
+                    bound.min(limit)
+                }
+                _ => limit,
+            };
+        }
+        for (index, driver) in self.drivers.iter_mut().enumerate() {
+            let Some(Driver {
+                operation:
+                    Operation::Register {
+                        data,
+                        reset_value,
+                        physical_width,
+                        ..
+                    },
+                ..
+            }) = driver
+            else {
+                continue;
+            };
+            let bound = maximum[*data].max(*reset_value);
+            let bits = (u64::BITS - bound.leading_zeros()).max(1) as u8;
+            if bits < self.signals[index].width {
+                *physical_width = Some(bits);
+            }
         }
     }
 
@@ -739,15 +808,34 @@ impl Module {
                     writeln!(out, "  assign {target}= {{{gap}'d0, {}}};", signal(a))
                 }
                 Operation::Binary(op, a, b) => writeln!(out, "  assign {target}= {}{op} {};", signal(a), signal(b)),
+                Operation::NarrowBinary(op, a, b, bits) => {
+                    let narrow = escaped(&format!("vexim$arith{i}"));
+                    writeln!(out, "  logic {}{narrow};", range(bits)).unwrap();
+                    writeln!(out, "  assign {narrow}= {bits}'({}) {op} {bits}'({});",
+                        signal(a), signal(b)).unwrap();
+                    writeln!(out, "  assign {target}= {{{}'d0, {narrow}}};", width - bits)
+                }
                 Operation::SharedBinary { op, select, yes, no, common, common_first } => {
                     let selected = format!("({}? {}: {})", signal(select), signal(yes), signal(no));
                     let common = signal(common);
                     let (left, right) = if common_first { (common, selected) } else { (selected, common) };
                     writeln!(out, "  assign {target}= {left}{op} {right};")
                 }
-                Operation::Register { clock, reset, data, reset_value } => writeln!(out,
-                    "  always_ff @(posedge {}) begin\n    if ({}) {target}<= {width}'d{reset_value};\n    else {target}<= {};\n  end",
-                    signal(clock), signal(reset), signal(data)),
+                Operation::Register { clock, reset, data, reset_value, physical_width } => {
+                    let bits = physical_width.unwrap_or(width);
+                    let storage = if physical_width.is_some() {
+                        // Dollar signs cannot occur in a Vexim identifier.
+                        let storage = escaped(&format!("vexim$reg{i}"));
+                        writeln!(out, "  logic {}{storage};", range(bits)).unwrap();
+                        writeln!(out, "  assign {target}= {{{}'d0, {storage}}};", width - bits).unwrap();
+                        storage
+                    } else {
+                        target
+                    };
+                    writeln!(out,
+                        "  always_ff @(posedge {}) begin\n    if ({}) {storage}<= {bits}'d{reset_value};\n    else {storage}<= {};\n  end",
+                        signal(clock), signal(reset), signal(data))
+                }
             }.unwrap();
         }
         out.push_str("endmodule\n");

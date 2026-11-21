@@ -1,0 +1,191 @@
+module soc_peripherals
+input clk u1
+input rst u1
+input uart_start u1
+input spi_start u1
+input timer_set_compare u1
+input timer_set_enable u1
+input data u32
+input spi_miso u1
+input uart_byte u8
+output uart_load u1
+output uart_tx u1
+output uart_busy u1
+output spi_busy u1
+output spi_cs_n u1
+output spi_mosi u1
+output spi_sck u1
+output spi_rx u8
+output timer_count u32
+output timer_compare u32
+output timer_enable u1
+output timer_irq u1
+wire one u1
+comb one const 1
+wire zero u1
+comb zero const 0
+wire zero3 u3
+comb zero3 const 0
+wire one3 u3
+comb one3 const 1
+wire zero4 u4
+comb zero4 const 0
+wire one4 u4
+comb one4 const 1
+wire one32 u32
+comb one32 const 1
+wire zero8 u8
+comb zero8 const 0
+wire eight u4
+comb eight const 8
+wire nine u4
+comb nine const 9
+wire ten u4
+comb ten const 10
+
+# UART: eight clocks per bit, start and stop levels from the bit counter.
+wire uart_left u4
+wire uart_div u3
+wire div_end u1
+comb div_end eq uart_div div_max
+wire div_max u3
+comb div_max const 7
+wire uart_idle u1
+comb uart_idle eq uart_left zero4
+wire uart_tick u1
+comb uart_tick and uart_busy div_end
+wire uart_dec u4
+comb uart_dec sub uart_left one4
+wire uart_after_tick u4
+comb uart_after_tick mux uart_tick uart_dec uart_left
+wire div_inc u3
+comb div_inc add uart_div one3
+wire div_when_busy u3
+comb div_when_busy mux uart_busy div_inc uart_div
+wire start_level u1
+comb start_level eq uart_left ten
+wire stop_level u1
+comb stop_level eq uart_left one4
+wire terminal_level u1
+comb terminal_level or uart_idle stop_level
+wire uart_index u4
+comb uart_index sub nine uart_left
+comb uart_busy xor uart_idle one
+comb uart_load and uart_start uart_idle
+wire uart_left_next u4
+comb uart_left_next mux uart_load ten uart_after_tick
+sync uart_left clk rst uart_left_next 0
+wire uart_div_next u3
+comb uart_div_next mux uart_load zero3 div_when_busy
+sync uart_div clk rst uart_div_next 0
+wire index0 u1
+comb index0 slice uart_index 0 0
+wire index1 u1
+comb index1 slice uart_index 1 1
+wire index2 u1
+comb index2 slice uart_index 2 2
+wire data_bit0 u1
+comb data_bit0 slice uart_byte 0 0
+wire data_bit1 u1
+comb data_bit1 slice uart_byte 1 1
+wire data_bit2 u1
+comb data_bit2 slice uart_byte 2 2
+wire data_bit3 u1
+comb data_bit3 slice uart_byte 3 3
+wire data_bit4 u1
+comb data_bit4 slice uart_byte 4 4
+wire data_bit5 u1
+comb data_bit5 slice uart_byte 5 5
+wire data_bit6 u1
+comb data_bit6 slice uart_byte 6 6
+wire data_bit7 u1
+comb data_bit7 slice uart_byte 7 7
+wire select_0_0 u1
+comb select_0_0 mux index0 data_bit1 data_bit0
+wire select_0_1 u1
+comb select_0_1 mux index0 data_bit3 data_bit2
+wire select_0_2 u1
+comb select_0_2 mux index0 data_bit5 data_bit4
+wire select_0_3 u1
+comb select_0_3 mux index0 data_bit7 data_bit6
+wire select_1_0 u1
+comb select_1_0 mux index1 select_0_1 select_0_0
+wire select_1_1 u1
+comb select_1_1 mux index1 select_0_3 select_0_2
+wire select_2_0 u1
+comb select_2_0 mux index2 select_1_1 select_1_0
+wire uart_bit_out u1
+comb uart_bit_out or terminal_level select_2_0
+comb uart_tx mux start_level zero uart_bit_out
+
+# SPI mode 0: sample on rising edges and shift on falling edges.
+wire spi_left u4
+wire spi_tx u8
+wire spi_idle u1
+comb spi_idle eq spi_left zero4
+wire spi_load u1
+comb spi_load and spi_start spi_idle
+wire spi_low u1
+comb spi_low xor spi_sck one
+wire spi_sample u1
+comb spi_sample and spi_busy spi_low
+wire spi_shift u1
+comb spi_shift and spi_busy spi_sck
+wire spi_dec u4
+comb spi_dec sub spi_left one4
+wire spi_count_after_shift u4
+comb spi_count_after_shift mux spi_shift spi_dec spi_left
+wire spi_tx_low u7
+comb spi_tx_low slice spi_tx 6 0
+wire spi_tx_shifted u8
+comb spi_tx_shifted concat spi_tx_low zero
+wire spi_tx_advance u8
+comb spi_tx_advance mux spi_shift spi_tx_shifted spi_tx
+wire spi_rx_low u7
+comb spi_rx_low slice spi_rx 6 0
+wire spi_rx_shifted u8
+comb spi_rx_shifted concat spi_rx_low spi_miso
+wire spi_rx_advance u8
+comb spi_rx_advance mux spi_sample spi_rx_shifted spi_rx
+wire tx_data u8
+comb tx_data slice data 7 0
+comb spi_busy xor spi_idle one
+comb spi_cs_n copy spi_idle
+comb spi_mosi slice spi_tx 7 7
+wire spi_left_next u4
+comb spi_left_next mux spi_load eight spi_count_after_shift
+sync spi_left clk rst spi_left_next 0
+wire spi_sck_next u1
+comb spi_sck_next mux spi_busy spi_low spi_sck
+sync spi_sck clk rst spi_sck_next 0
+wire spi_tx_next u8
+comb spi_tx_next mux spi_load tx_data spi_tx_advance
+sync spi_tx clk rst spi_tx_next 0
+wire spi_rx_next u8
+comb spi_rx_next mux spi_load zero8 spi_rx_advance
+sync spi_rx clk rst spi_rx_next 0
+
+# Timer retains the 32-bit memory-mapped counter and compare registers.
+wire enable_bit u1
+comb enable_bit slice data 0 0
+wire timer_count_next u32
+comb timer_count_next add timer_count one32
+sync timer_count clk rst timer_count_next 0
+wire timer_compare_next u32
+comb timer_compare_next mux timer_set_compare data timer_compare
+sync timer_compare clk rst timer_compare_next 0
+wire timer_enable_next u1
+comb timer_enable_next mux timer_set_enable enable_bit timer_enable
+sync timer_enable clk rst timer_enable_next 0
+wire timer_wide u33
+comb timer_wide zext timer_count
+wire compare_wide u33
+comb compare_wide zext timer_compare
+wire compare_diff u33
+comb compare_diff sub timer_wide compare_wide
+wire borrow u1
+comb borrow slice compare_diff 32 32
+wire reached u1
+comb reached xor borrow one
+comb timer_irq and timer_enable reached
+end

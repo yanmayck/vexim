@@ -81,6 +81,14 @@ binary behavior and may change four-state simulation with an unknown
 selector. FPGA area and timing depend on the mapping. The flag is
 opt-in. Builds without it keep the original emission path.
 
+The compiler also tracks conservative unsigned upper bounds through
+combinational drivers. It can emit narrower adders and multipliers when
+those bounds prove that upper bits are zero, and smaller registers when
+both the reset value and stored data fit. Outputs retain their declared
+widths through zero extension. Unproven bounds, including full-range
+feedback, retain the original widths. The narrowing preserves binary
+behavior after the first defined register update.
+
 Every output and wire must have exactly one driver. Inputs are driven by the caller. The compiler rejects combinational cycles, including cycles through multiplexer selectors. Feedback through a register is allowed. Compiler diagnostics identify the source line, and generated SystemVerilog includes the source line alongside each driver.
 
 See the [UART transmitter](examples/uart_tx.vxm) for a complete design that combines counters, bit slicing, and conditional state updates.

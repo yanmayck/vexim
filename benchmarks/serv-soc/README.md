@@ -153,3 +153,41 @@ The DMA has no additional foldable branches under the new pass.
 This flag implements constant propagation and runs the existing dead
 logic elimination during emission. Resource sharing and state encoding
 are outside V3.
+
+## UP5K V4 with native peripherals and optional UART EBR
+
+V4 ports UART, SPI mode 0, and the timer to Vexim. The UART uses a
+three-bit divider and an eight-bit payload buffer. The timer keeps its
+32-bit software-visible registers. The optional EBR mode moves the UART
+payload into a dedicated RAM block. The 16 KiB data SRAM continues to
+use two SPRAM blocks.
+
+All three rows below were routed in a paired comparison on the same
+checkout, same five seeds and 50 MHz constraint. The V3 control in this
+checkout maps slightly differently from the original V3 run.
+
+| Metric | V3 control | V4 register buffer | V4 EBR buffer |
+|---|---:|---:|---:|
+| Mapped LUT4s | 950 | 892 | 892 |
+| Packed logic cells | 1,240 | 1,199 | 1,191 |
+| Logic cells free | 76.5% | 77.3% | 77.4% |
+| EBR blocks used | 1 | 1 | 2 |
+| SPRAM blocks used | 2 | 2 | 2 |
+| Median routed Fmax | 26.85 MHz | 26.28 MHz | 26.71 MHz |
+| Boot and DMA test | Pass | Pass | Pass |
+| Boot cycles | 17,199 | 17,199 | 17,199 |
+
+The additional EBR saves eight packed cells relative to the register
+buffer. The EBR build is 135 packed cells above the 80%-free threshold
+of 1,056 occupied cells. None of the fifteen routes reached 50 MHz.
+Use the same compiler container as V3 and pass either `--v4` or
+`--v4-ebr` in an independent output directory.
+
+The compiler's [operator-sharing microbenchmark](../operator-sharing/README.md)
+still maps 94 to 64 LUT4s. The new width-inference regression narrows a
+32-bit register to nine physical bits, keeping the 32-bit interface.
+Yosys proved equivalence and mapped both versions of that fixture to
+40 LUT4s. For the actual DMA and peripheral Vexim sources, the default
+and area-optimized compiler emitted byte-identical SystemVerilog.
+The whole-SoC area reductions in this table come from the peripheral
+rewrite and choice of memory backend.

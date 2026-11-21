@@ -29,17 +29,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--v2", action="store_true", help="Use the native Vexim bus and DMA")
     parser.add_argument("--v3", action="store_true", help="Use the V2 source with veximc --opt-area")
+    parser.add_argument("--v4", action="store_true", help="Use Vexim peripherals with register storage")
+    parser.add_argument("--v4-ebr", action="store_true", help="Use Vexim peripherals with EBR UART storage")
     args = parser.parse_args()
-    if args.v2 and args.v3:
-        parser.error("select only one of --v2 and --v3")
+    if sum((args.v2, args.v3, args.v4, args.v4_ebr)) > 1:
+        parser.error("select only one SoC variant")
     original = sorted(Path("/rtl").glob("*.v"))
     if not original:
         raise ValueError("mount the pinned official SERV sources at /rtl")
     boot_rom(OUT / "boot.hex")
     sources = ["-DUP5K_SPRAM", *map(str, original), str(HERE / "soc.sv")]
-    if args.v2 or args.v3:
+    if args.v2 or args.v3 or args.v4 or args.v4_ebr:
         bus_dma = OUT / "bus_dma.sv"
-        options = ["--opt-area"] if args.v3 else []
+        options = ["--opt-area"] if args.v3 or args.v4 or args.v4_ebr else []
         run(["veximc", "build", str(HERE / "bus_dma.vxm"), "-o", str(bus_dma), *options],
             "vexim-compile")
         if args.v3:
@@ -60,6 +62,14 @@ def main():
         if "PASS DMA" not in dma_test:
             raise RuntimeError("native DMA boundary test failed")
         print(dma_test.strip(), flush=True)
+    if args.v4 or args.v4_ebr:
+        peripherals = OUT / "peripherals.sv"
+        run(["veximc", "build", str(HERE / "peripherals.vxm"), "-o", str(peripherals),
+             "--opt-area"], "peripherals-compile")
+        sources.insert(0, "-DVEXIM_PERIPHERALS")
+        if args.v4_ebr:
+            sources.insert(0, "-DUART_EBR")
+        sources.append(str(peripherals))
     model = "/usr/share/yosys/ice40/cells_sim.v"
     run(["iverilog", "-g2012", "-s", "tb", "-o", "up5k.sim", *sources, model,
          str(HERE / "tb.sv")], "up5k-compile")

@@ -169,3 +169,34 @@ fn operator_sharing_respects_other_consumers_and_subtraction_order() {
         .replace("sub b c", "eq b c");
     assert!(emit(&comparisons).contains("(\\choose ? \\a : \\b )== \\c "));
 }
+
+#[test]
+fn narrowing_preserves_port_widths_and_full_range_feedback() {
+    let source = r#"module narrow
+input clk u1
+input rst u1
+input a u8
+input b u8
+output sum u32
+output registered u32
+output count u32
+wire wide_a u32
+wire wide_b u32
+wire one u32
+wire next_count u32
+comb wide_a zext a
+comb wide_b zext b
+comb sum add wide_a wide_b
+sync registered clk rst sum
+comb one const 1
+comb next_count add count one
+sync count clk rst next_count
+end"#;
+    let mut module = parse(source).unwrap();
+    module.narrow_widths();
+    let sv = module.system_verilog();
+    assert!(sv.contains("output logic [31:0] \\registered "));
+    assert!(sv.contains("logic [8:0] \\vexim$reg"));
+    assert!(sv.contains("logic [8:0] \\vexim$arith"));
+    assert!(sv.contains("\\count <= 32'd0;"));
+}
