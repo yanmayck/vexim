@@ -48,6 +48,9 @@ The [ECP5 matrix accelerator benchmark](benchmarks/ecp5-gemm/README.md)
 scales to 144 signed INT8 processing elements and measures compiler
 resources, FPGA synthesis and routed timing.
 
+The [SERV SoC pilot](benchmarks/serv-soc/README.md) boots firmware on
+a complete ECP5 system with SRAM, DMA, UART, SPI, and a timer.
+
 ## Write and compile hardware
 
 Install from source:

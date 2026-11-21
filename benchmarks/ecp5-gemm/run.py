@@ -1,6 +1,5 @@
 """Measure the same signed INT8 systolic array from Vexim and SystemVerilog."""
 import json
-import subprocess
 import sys
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -8,27 +7,10 @@ from statistics import median
 
 sys.path.insert(0, "/work/benchmarks")
 from run import OUTPUT, build_harness, command
+from ecp5_route import route_seed
 from generate import generate, TOP
 
 SYNTHESIS = "synth_ecp5"
-
-
-def route_seed(harness, label, seed):
-    report = OUTPUT / f"{label}-seed-{seed}.json"
-    with report.with_suffix(".log").open("w") as log:
-        subprocess.run([
-            "nextpnr-ecp5", "--85k", "--package", "CABGA381",
-            "--speed", "6", "--router", "router2", "--json", str(harness), "--freq", "75",
-            "--lpf-allow-unconstrained", "--timing-allow-fail",
-            "--seed", str(seed), "--report", str(report),
-            "--textcfg", str(report.with_suffix(".config")),
-        ], stdout=log, stderr=subprocess.STDOUT, check=True, timeout=900)
-    data = json.loads(report.read_text())
-    (clock, timing), = data["fmax"].items()
-    usage = {kind: count["used"] for kind, count in data["utilization"].items()
-             if count["used"]}
-    return {"seed": seed, "fmax_mhz": timing["achieved"], "clock": clock,
-            "target_mhz": timing["constraint"], "usage": usage}
 
 
 def main():
@@ -63,7 +45,7 @@ def main():
                         json.loads(mapped.read_text())["modules"][TOP]["cells"].values())
         harness = build_harness(TOP, design, mapped, prefix, synthesis=SYNTHESIS)
         with ThreadPoolExecutor(max_workers=4) as executor:
-            jobs = [executor.submit(route_seed, harness, label, seed)
+            jobs = [executor.submit(route_seed, OUTPUT, harness, label, seed)
                     for seed in range(1, 6)]
             runs = []
             for job in jobs:
