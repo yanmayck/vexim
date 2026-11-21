@@ -14,12 +14,14 @@ to iCE40 primitives. All six designs pass Verilator lint, independent simulation
 | Automation CPU | 530 / 660 | 228 / 229 | 163 / 163 | 1.42 / 1.62 |
 
 The memory design uses 36.3% fewer LUT4s in this sample. The arbiter uses
-9.5% more, and the CPU is effectively tied. These are synthesis results
-before placement and routing. Power, maximum clock frequency and device fit
-require further measurement. Generation took more tokens and time in Vexim
+9.5% more, and the CPU is effectively tied. The LUT4 counts are measured before routing.
+On the iCE40 HX8K/CT256, the memory controller in a shared serial test
+harness reached a median post-route Fmax of 107.17 MHz (Vexim) versus
+86.95 MHz (SystemVerilog) over five seeds. Board I/O timing and power
+remain unmeasured. Generation took more tokens and time in Vexim
 in the original experiment. See [method and frozen sources](benchmarks/README.md).
 
-Reproduce the table and simulations from this checkout with Docker:
+Reproduce synthesis, simulation, and memory timing from this checkout with Docker:
 
 ```sh
 sh run_benchmarks.sh
