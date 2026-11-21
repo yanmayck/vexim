@@ -21,7 +21,7 @@ def command(arguments, log):
 
 
 
-def build_harness(block, source, mapped, prefix):
+def build_harness(block, source, mapped, prefix, *, read_json=False, synthesis="synth_ice40"):
     ports = json.loads(mapped.read_text())["modules"][block]["ports"]
     ports = dict(sorted(ports.items()))
     # Shift complete input and output vectors through a small shared test interface.
@@ -53,8 +53,9 @@ def build_harness(block, source, mapped, prefix):
 endmodule
 """)
     netlist = prefix.with_suffix(".harness.json")
-    command(["yosys", "-Q", "-p", f"read_verilog -sv {source} {wrapper}; "
-             f"synth_ice40 -top harness; check -assert; write_json {netlist}"],
+    import_design = f"read_json {source}" if read_json else f"read_verilog -sv {source}"
+    command(["yosys", "-Q", "-p", f"{import_design}; read_verilog -sv {wrapper}; "
+             f"{synthesis} -top harness; check -assert; write_json {netlist}"],
             prefix.with_suffix(".harness.log"))
     return netlist
 

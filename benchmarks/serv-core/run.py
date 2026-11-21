@@ -49,9 +49,12 @@ def main():
         connections.append(f".{name}({name})")
     generated.write_text(source + f"\nmodule {TOP}({', '.join(ports)});\n"
                          f"  serv_rf_vex cpu({', '.join(connections)});\nendmodule\n")
+    intermediate = OUTPUT / "intermediate.sv"
+    yosys(f"read_json {coarse}; write_verilog -noattr {intermediate}", "intermediate-export")
     results = {}
     baseline_trace = None
-    for label, rtl in (("official", original), ("vexim", [generated])):
+    variants = (("official", original), ("intermediate", [intermediate]), ("vexim", [generated]))
+    for label, rtl in variants:
         binary = OUTPUT / f"{label}.sim"
         log_command(["iverilog", "-g2012", "-s", "tb", "-o", str(binary),
                      *map(str, rtl), str(CASE / "tb.sv")], f"{label}-sim-compile")
@@ -67,12 +70,14 @@ def main():
         print(f"{label}: PASS ({len(trace)-1} matching program bus transactions)", flush=True)
         prefix = OUTPUT / label
         mapped = prefix.with_suffix(".ice40.json")
-        rtl_sources = " ".join(map(str, rtl))
-        yosys(f"read_verilog -sv {rtl_sources}; synth_ice40 -top {TOP} -flatten; "
+        use_json = label == "intermediate"
+        rtl_sources = str(coarse) if use_json else " ".join(map(str, rtl))
+        import_design = f"read_json {coarse}" if use_json else f"read_verilog -sv {rtl_sources}"
+        yosys(f"{import_design}; synth_ice40 -top {TOP} -flatten; "
               f"check -assert; write_json {mapped}", f"{label}-synth")
         cells = Counter(cell["type"] for cell in
                         json.loads(mapped.read_text())["modules"][TOP]["cells"].values())
-        harness = build_harness(TOP, rtl_sources, mapped, prefix)
+        harness = build_harness(TOP, rtl_sources, mapped, prefix, read_json=use_json)
         seeds = route(harness, prefix, "hx8k", "ct256")
         utilization = json.loads(Path(f"{prefix}.hx8k-ct256-seed-1.json").read_text())["utilization"]
         results[label] = {

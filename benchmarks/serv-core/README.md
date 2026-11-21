@@ -15,22 +15,31 @@ the data paths. The importer resolves undefined netlist constants to
 zero where they are used in Vexim. This is a structural migration of
 the pinned profile.
 
-| Metric | Official SERV | Vexim reconstruction |
-|---|---:|---:|
-| Standalone LUT4s | 266 | 291 |
-| Standalone flip-flops | 182 | 184 |
-| RAM4K blocks, standalone and with harness | 1 | 1 |
-| Routed logic cells with shared serial harness | 635 | 665 |
-| Median post-route Fmax on HX8K/CT256 | 73.93 MHz | 71.96 MHz |
-| Seeds meeting the 50 MHz target | 5/5 | 5/5 |
+The intermediate control feeds the same pre-Vexim RTLIL snapshot directly
+into FPGA synthesis with Yosys `read_json`. Only its simulation uses an
+exported Verilog file.
 
-Both designs passed the same RISC-V program in Icarus with wait states
+| Metric | Official SERV | Intermediate directly | Vexim reconstruction |
+|---|---:|---:|---:|
+| Standalone LUT4s | 266 | 1,753 | 291 |
+| Standalone flip-flops | 182 | 1,336 | 184 |
+| RAM4K blocks, standalone and with harness | 1 | 0 | 1 |
+| Routed logic cells with shared serial harness | 635 | 3,269 | 665 |
+| Median post-route Fmax on HX8K/CT256 | 73.93 MHz | 61.61 MHz | 71.96 MHz |
+| Seeds meeting the 50 MHz target | 5/5 | 5/5 | 5/5 |
+
+The direct intermediate snapshot no longer let Yosys find the
+registers on the RAM read address. The memory therefore mapped into
+logic. The Vexim round trip restored RAM inference in this flow,
+with a modest remaining area and timing gap to the official baseline.
+
+All three designs passed the same RISC-V program in Icarus with wait states
 in instruction and data buses. The 12 acknowledged bus transactions
 matched exactly, including cycle numbers. The program exercises
 arithmetic, a shift, load/store, a taken branch and a jump. This is one
 directed integration test. The experiment does not establish full ISA
 compliance or formal equivalence. Fmax is estimated after nextpnr
-routing, with the same serial test harness in both designs.
+routing, with the same serial test harness in all three designs.
 
 ## Reproduce with Docker
 
