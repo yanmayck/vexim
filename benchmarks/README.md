@@ -31,24 +31,32 @@ Its `stream.cpp` is included. Running it requires Verilator and a C++
 compiler and is outside the default lightweight benchmark image.
 
 LUT4, flip-flop, carry and memory cell types remain in the JSON results.
-The memory controller also runs through nextpnr on the iCE40 HX8K in
-the CT256 package, with seeds 1 through 5 and a shared 50 MHz target.
-The standalone controller exposes 386 I/O bits, beyond the package
-capacity. Both variants use the same five-pin serial harness, generated
-from their sorted port lists. The tool assigns those five pins automatically.
-The reported Fmax estimates the single clock domain of the wrapped
-design after routing. Board pin constraints, external I/O
-timing and power are outside this benchmark. Per-seed timing and utilization
-reports are written to the same output directory.
+## Post-route timing
 
-| Seed | Vexim Fmax (MHz) | SystemVerilog Fmax (MHz) |
-|---:|---:|---:|
-| 1 | 106.61 | 86.95 |
-| 2 | 116.71 | 82.05 |
-| 3 | 102.76 | 86.95 |
-| 4 | 107.17 | 92.95 |
-| 5 | 116.52 | 92.95 |
-| Median | 107.17 | 86.95 |
+All three blocks run through nextpnr on the iCE40 HX8K/CT256 and UP5K/SG48
+with seeds 1 through 5 and a 50 MHz target. The standalone memory
+controller exposes 386 I/O bits, beyond either package's capacity. All
+pairs use the same five-pin serial harness structure, generated from
+their sorted port lists. nextpnr automatically assigns the five pins.
+Fmax estimates the single clock domain of the wrapped design after
+routing. Board I/O timing and power are outside this benchmark.
 
-The wrapped designs use 562 and 649 packed logic cells respectively.
-The standalone LUT4 counts in the preceding table exclude the harness.
+| Block | HX8K Fmax, Vexim / SV (MHz) | UP5K Fmax, Vexim / SV (MHz) | UP5K meeting 50 MHz, Vexim / SV |
+|---|---:|---:|---:|
+| Round-robin arbiter | 144.22 / 124.36 | 51.30 / 44.58 | 5/5 / 0/5 |
+| Memory controller | 107.17 / 86.95 | 40.89 / 33.93 | 0/5 / 0/5 |
+| Automation CPU | 145.54 / 150.44 | 56.07 / 57.86 | 5/5 / 5/5 |
+
+Fmax values are medians across the five seeds. All HX8K runs met 50 MHz.
+All 60 configurations routed, including those missing their timing target.
+Per-seed timing, packed logic cell counts and critical paths are in
+`build/benchmarks/results.json` and the individual nextpnr reports.
+
+![FPGA benchmark comparison](fpga-comparison.png)
+
+Regenerate the figure from local results with Python and Matplotlib:
+
+```sh
+python -m pip install matplotlib
+python benchmarks/plot.py build/benchmarks/results.json benchmarks/fpga-comparison.png
+```

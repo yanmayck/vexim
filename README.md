@@ -4,6 +4,8 @@ An explicitly typed hardware language with a Rust compiler that emits synthesiza
 
 ## Measured results
 
+![LUT4 counts and post-route clock frequencies for three RTL blocks on two iCE40 devices](benchmarks/fpga-comparison.png)
+
 Frozen designs from one paired Gemini 4 Argon experiment, mapped with Yosys 0.33
 to iCE40 primitives. All six designs pass Verilator lint, independent simulation, and Yosys synthesis.
 
@@ -13,15 +15,14 @@ to iCE40 primitives. All six designs pass Verilator lint, independent simulation
 | Memory controller | 396 / 557 | 151 / 237 | 68 / 68 | 1.22 / 1.32 |
 | Automation CPU | 530 / 660 | 228 / 229 | 163 / 163 | 1.42 / 1.62 |
 
-The memory design uses 36.3% fewer LUT4s in this sample. The arbiter uses
-9.5% more, and the CPU is effectively tied. The LUT4 counts are measured before routing.
-On the iCE40 HX8K/CT256, the memory controller in a shared serial test
-harness reached a median post-route Fmax of 107.17 MHz (Vexim) versus
-86.95 MHz (SystemVerilog) over five seeds. Board I/O timing and power
-remain unmeasured. Generation took more tokens and time in Vexim
-in the original experiment. See [method and frozen sources](benchmarks/README.md).
+The controller used **36.3% fewer LUT4s**, and its median Fmax was higher
+on both devices. The arbiter used two more LUT4s and also ran faster on both.
+The automation CPU used nearly the same number of LUT4s and ran slightly
+slower on both. Fmax comes from a common serial test harness. In the original
+generation experiment, Vexim took more tokens and time.
+See [methods and per-device timing](benchmarks/README.md).
 
-Reproduce synthesis, simulation, and memory timing from this checkout with Docker:
+Reproduce synthesis, simulation, and timing from this checkout with Docker:
 
 ```sh
 sh run_benchmarks.sh

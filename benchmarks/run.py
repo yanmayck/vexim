@@ -21,8 +21,8 @@ def command(arguments, log):
 
 
 
-def route_memory(source, mapped, prefix):
-    ports = json.loads(mapped.read_text())["modules"]["mem_controller"]["ports"]
+def build_harness(block, source, mapped, prefix):
+    ports = json.loads(mapped.read_text())["modules"][block]["ports"]
     ports = dict(sorted(ports.items()))
     # Shift complete input and output vectors through a small shared test interface.
     inputs = [name for name, port in ports.items()
@@ -49,18 +49,22 @@ def route_memory(source, mapped, prefix):
     else if (shift) capture <= {{capture[{output_bits - 2}:0], 1'b0}};
   end
   assign serial_out = capture[{output_bits - 1}];
-  mem_controller dut({wiring});
+  {block} dut({wiring});
 endmodule
 """)
     netlist = prefix.with_suffix(".harness.json")
     command(["yosys", "-Q", "-p", f"read_verilog -sv {source} {wrapper}; "
              f"synth_ice40 -top harness; check -assert; write_json {netlist}"],
             prefix.with_suffix(".harness.log"))
+    return netlist
+
+
+def route(netlist, prefix, device, package):
     runs = []
     for seed in range(1, 6):
-        report = Path(f"{prefix}.hx8k-seed-{seed}.json")
+        report = Path(f"{prefix}.{device}-{package}-seed-{seed}.json")
         seconds = command([
-            "nextpnr-ice40", "--hx8k", "--package", "ct256",
+            "nextpnr-ice40", f"--{device}", "--package", package,
             "--json", str(netlist), "--pcf-allow-unconstrained",
             "--freq", "50", "--timing-allow-fail", "--seed", str(seed),
             "--report", str(report),
@@ -110,16 +114,17 @@ def main():
                    "ram4k": cells["SB_RAM40_4K"], "mapped_cells": dict(cells),
                    "synthesis_seconds": seconds,
                    "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
-            if block == "mem_controller":
-                row["hx8k_ct256"] = route_memory(source, mapped, prefix)
-                print(f"HX8K/CT256 {language} Fmax (MHz): "
-                      + ", ".join(f"{run['fmax_mhz']:.2f}" for run in row["hx8k_ct256"]),
-                      flush=True)
+            harness = build_harness(block, source, mapped, prefix)
+            for device, package in (("hx8k", "ct256"), ("up5k", "sg48")):
+                runs = route(harness, prefix, device, package)
+                row[f"{device}_{package}"] = runs
+                print(f"{block} {device}/{package} {language} Fmax (MHz): "
+                      + ", ".join(f"{run['fmax_mhz']:.2f}" for run in runs), flush=True)
             rows.append(row)
             print(f"{block} | {language} | {generic_count} | {row['lut4']} | "
                   f"{row['flip_flops']} | {row['ram4k']} | {seconds}", flush=True)
     (OUTPUT / "results.json").write_text(json.dumps({
-        "yosys": version, "verilator": subprocess.check_output(["verilator", "--version"], text=True).strip(), "target": "iCE40 synthesis; memory routed on HX8K/CT256", "runs": rows,
+        "yosys": version, "verilator": subprocess.check_output(["verilator", "--version"], text=True).strip(), "target": "iCE40 synthesis; wrapped designs routed on HX8K/CT256 and UP5K/SG48", "runs": rows,
     }, indent=2) + "\n")
 
 
