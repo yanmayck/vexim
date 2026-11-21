@@ -416,7 +416,7 @@ pub fn parse_with_parameters(
         drivers,
         memories,
     };
-    module.check_cycles()?;
+    module.combinational_order()?;
     Ok(module)
 }
 
@@ -453,7 +453,7 @@ impl Module {
         }
         live
     }
-    fn check_cycles(&self) -> Result<(), Diagnostic> {
+    fn combinational_order(&self) -> Result<Vec<usize>, Diagnostic> {
         let mut dependents = vec![Vec::new(); self.signals.len()];
         let mut pending = vec![0; self.signals.len()];
         for (target, driver) in self.drivers.iter().enumerate() {
@@ -465,7 +465,9 @@ impl Module {
             }
         }
         let mut queue: VecDeque<_> = (0..pending.len()).filter(|&i| pending[i] == 0).collect();
+        let mut order = Vec::with_capacity(self.signals.len());
         while let Some(signal) = queue.pop_front() {
+            order.push(signal);
             for &dependent in &dependents[signal] {
                 pending[dependent] -= 1;
                 if pending[dependent] == 0 {
@@ -483,7 +485,62 @@ impl Module {
                 message: format!("combinational cycle feeds {}", signal.name),
             });
         }
-        Ok(())
+        Ok(order)
+    }
+
+    /// Fold combinational constants before emission. Stateful inputs remain unknown.
+    pub fn propagate_constants(&mut self) {
+        let order = self
+            .combinational_order()
+            .expect("validated combinational graph");
+        let mut constants = vec![None; self.signals.len()];
+        for index in order {
+            let Some(driver) = &mut self.drivers[index] else {
+                continue;
+            };
+            let width = self.signals[index].width;
+            let mask = u64::MAX >> (64 - width);
+            let known = |signal: usize| constants[signal];
+            if let Operation::Mux(select, yes, no) = driver.operation {
+                if let Some(value) = known(select) {
+                    driver.operation = Operation::Copy(if value == 0 { no } else { yes });
+                }
+            }
+            let value = match driver.operation {
+                Operation::Constant(value) => Some(value),
+                Operation::Copy(a) | Operation::ZeroExtend(a) => known(a),
+                Operation::Slice(a, _, low) => known(a).map(|value| value >> low),
+                Operation::Concat(a, b) => known(a)
+                    .zip(known(b))
+                    .map(|(high, low)| (high << self.signals[b].width) | low),
+                Operation::Binary(op, a, b) => match (op, known(a), known(b)) {
+                    ("&", Some(0), _) | ("&", _, Some(0)) => Some(0),
+                    ("|", Some(a), _) if a == mask => Some(mask),
+                    ("|", _, Some(b)) if b == mask => Some(mask),
+                    (op, Some(a), Some(b)) => Some(match op {
+                        "+" => a.wrapping_add(b),
+                        "-" => a.wrapping_sub(b),
+                        "*" => a.wrapping_mul(b),
+                        "&" => a & b,
+                        "|" => a | b,
+                        "^" => a ^ b,
+                        "==" => u64::from(a == b),
+                        "!=" => u64::from(a != b),
+                        _ => unreachable!("validated binary operation"),
+                    }),
+                    _ => None,
+                },
+                Operation::Read { memory, address } => known(address)
+                    .filter(|&address| address >= u64::from(self.memories[memory].depth))
+                    .map(|_| 0),
+                Operation::Register { .. } | Operation::Mux(..) => None,
+            };
+            if let Some(value) = value {
+                let value = value & mask;
+                constants[index] = Some(value);
+                driver.operation = Operation::Constant(value);
+            }
+        }
     }
 
     /// Emit synthesizable SystemVerilog with a source line comment for each driver.

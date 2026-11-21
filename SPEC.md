@@ -67,6 +67,13 @@ affect outputs. It preserves input/output ports, live register dependencies,
 and all memory write ports and their dependencies. Partial unused bits may
 remain in a live signal and can produce lint warnings.
 
+`veximc build FILE.vxm --opt-area` folds combinational constants
+before this elimination pass. It evaluates width-limited arithmetic,
+comparisons, slices and concatenations, folds selected branches when a
+mux selector is constant, and simplifies AND with zero and OR with
+all ones. Registers remain stateful and memory writes are preserved.
+The flag is opt-in. Builds without it keep the original emission path.
+
 Every output and wire must have exactly one driver. Inputs are driven by the caller. The compiler rejects combinational cycles, including cycles through multiplexer selectors. Feedback through a register is allowed. Compiler diagnostics identify the source line, and generated SystemVerilog includes the source line alongside each driver.
 
 See the [UART transmitter](examples/uart_tx.vxm) for a complete design that combines counters, bit slicing, and conditional state updates.

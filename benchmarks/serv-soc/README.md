@@ -126,3 +126,30 @@ For V2, append `--v2` to the UP5K command above and use a separate output
 directory. Before booting the SoC, the runner tests DMA address and
 length boundaries, the last valid SRAM word, payload, and reset while
 a transfer is active.
+
+## UP5K V3 compiler-only comparison
+
+Build a fresh compiler Docker image with
+`docker build -f benchmarks/serv/Dockerfile -t vexim-serv .`.
+Use that image in the UP5K command above and run it twice in separate
+output directories with `--v2` and `--v3`. Both flags use the same
+`bus_dma.vxm`, with `--v3` adding `veximc --opt-area`.
+The V3 script also checks sequential equivalence between the two
+generated DMA modules using Yosys.
+
+| Metric | V2 default compiler | V3 with `--opt-area` |
+|---|---:|---:|
+| Mapped LUT4s | 968 | 968 |
+| Packed logic cells | 1,258 | 1,258 |
+| Logic cells free | 76.2% | 76.2% |
+| SPRAM / EBR blocks used | 2 / 1 | 2 / 1 |
+| Boot cycles | 17,199 | 17,199 |
+| Fmax, seeds 1–5 (MHz) | 27.65, 25.78, 26.40, 26.33, 27.36 | 27.65, 25.78, 26.40, 26.33, 27.36 |
+| Median routed Fmax | 26.40 MHz | 26.40 MHz |
+
+Both compilations emitted byte-identical SystemVerilog for this DMA.
+The pass eliminates dead branches in the compiler regression fixture.
+The DMA has no additional foldable branches under the new pass.
+This flag implements constant propagation and runs the existing dead
+logic elimination during emission. Resource sharing and state encoding
+are outside V3.

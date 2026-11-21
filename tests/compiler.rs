@@ -110,3 +110,37 @@ fn mux_selector_participates_in_cycle_detection() {
     assert_eq!(error.line, 4);
     assert!(error.message.contains("cycle"));
 }
+
+#[test]
+fn area_pass_folds_constants_and_drops_unselected_logic() {
+    let source = r#"module fold
+input clk u1
+input rst u1
+input input_value u64
+output always_zero u64
+output wrapped u64
+output registered u64
+wire zero u1
+wire one64 u64
+wire max u64
+wire dead u64
+wire inactive u64
+comb zero const 0
+comb one64 const 1
+comb max const 18446744073709551615
+comb dead mul input_value input_value
+comb inactive and input_value wrapped
+comb wrapped add max one64
+comb always_zero mux zero dead inactive
+sync registered clk rst input_value
+end"#;
+    let mut module = parse(source).unwrap();
+    assert!(module.system_verilog().contains("\\dead "));
+    module.propagate_constants();
+    let sv = module.system_verilog();
+    assert!(!sv.contains("\\dead "));
+    assert!(!sv.contains("\\inactive "));
+    assert!(sv.contains("assign \\always_zero = 64'd0;"));
+    assert!(sv.contains("assign \\wrapped = 64'd0;"));
+    assert!(sv.contains("always_ff"));
+}

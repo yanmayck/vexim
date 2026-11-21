@@ -28,15 +28,30 @@ def run(args, label):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--v2", action="store_true", help="Use the native Vexim bus and DMA")
+    parser.add_argument("--v3", action="store_true", help="Use the V2 source with veximc --opt-area")
     args = parser.parse_args()
+    if args.v2 and args.v3:
+        parser.error("select only one of --v2 and --v3")
     original = sorted(Path("/rtl").glob("*.v"))
     if not original:
         raise ValueError("mount the pinned official SERV sources at /rtl")
     boot_rom(OUT / "boot.hex")
     sources = ["-DUP5K_SPRAM", *map(str, original), str(HERE / "soc.sv")]
-    if args.v2:
+    if args.v2 or args.v3:
         bus_dma = OUT / "bus_dma.sv"
-        run(["veximc", "build", str(HERE / "bus_dma.vxm"), "-o", str(bus_dma)], "vexim-compile")
+        options = ["--opt-area"] if args.v3 else []
+        run(["veximc", "build", str(HERE / "bus_dma.vxm"), "-o", str(bus_dma), *options],
+            "vexim-compile")
+        if args.v3:
+            reference = OUT / "bus_dma_unoptimized.sv"
+            run(["veximc", "build", str(HERE / "bus_dma.vxm"), "-o", str(reference)],
+                "vexim-reference")
+            run(["yosys", "-Q", "-p", f"read_verilog -sv {reference}; "
+                 f"rename soc_bus_dma gold; read_verilog -sv {bus_dma}; rename soc_bus_dma gate; "
+                 "proc; opt; equiv_make gold gate equiv; hierarchy -top equiv; "
+                 "equiv_simple; equiv_induct -seq 4; equiv_status -assert"],
+                "vexim-equivalence")
+            print("PASS V2/V3 DMA equivalence", flush=True)
         sources.insert(0, "-DVEXIM_BUS_DMA")
         sources.append(str(bus_dma))
         run(["iverilog", "-g2012", "-s", "dma_tb", "-o", "dma.sim",

@@ -7,7 +7,7 @@ use std::{
 
 fn run() -> Result<(), String> {
     let args: Vec<_> = env::args_os().skip(1).collect();
-    let usage = "Usage: veximc check INPUT.vxm [--param NAME=VALUE]...\n       veximc build INPUT.vxm [-o OUTPUT.sv] [--param NAME=VALUE]...";
+    let usage = "Usage: veximc check INPUT.vxm [--param NAME=VALUE]...\n       veximc build INPUT.vxm [-o OUTPUT.sv] [--param NAME=VALUE]... [--opt-area]";
     if args.len() == 1 && args[0] == "--help" {
         println!("{usage}");
         return Ok(());
@@ -22,9 +22,14 @@ fn run() -> Result<(), String> {
         _ => return Err(usage.into()),
     };
     let mut output = None;
+    let mut opt_area = false;
     let mut overrides = BTreeMap::new();
     let mut flags = flags.iter();
     while let Some(flag) = flags.next() {
+        if flag == "--opt-area" && build && !opt_area {
+            opt_area = true;
+            continue;
+        }
         let value = flags.next().ok_or(usage)?;
         if flag == "-o" && build && output.is_none() {
             output = Some(value);
@@ -48,9 +53,12 @@ fn run() -> Result<(), String> {
     }
     let path = std::path::Path::new(input);
     let source = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let module = veximc::parse_with_parameters(&source, &overrides)
+    let mut module = veximc::parse_with_parameters(&source, &overrides)
         .map_err(|e| format!("{}:{e}", path.display()))?;
     if build {
+        if opt_area {
+            module.propagate_constants();
+        }
         let sv = module.system_verilog();
         if let Some(output) = output {
             fs::write(output, sv)
