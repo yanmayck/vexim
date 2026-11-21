@@ -1,0 +1,19 @@
+module state_add
+input clk u1
+input rst u1
+input advance u1
+input a u32
+input b u32
+output value u32
+wire select u1
+wire next_select u1
+wire one u32
+wire sum_a u32
+wire sum_b u32
+comb next_select xor select advance
+sync select clk rst next_select
+comb one const 1
+comb sum_a add a one
+comb sum_b add b one
+comb value mux select sum_a sum_b
+end

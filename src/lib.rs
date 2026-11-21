@@ -38,6 +38,14 @@ enum Operation {
     Concat(usize, usize),
     Binary(&'static str, usize, usize),
     Mux(usize, usize, usize),
+    SharedBinary {
+        op: &'static str,
+        select: usize,
+        yes: usize,
+        no: usize,
+        common: usize,
+        common_first: bool,
+    },
     Read {
         memory: usize,
         address: usize,
@@ -59,6 +67,13 @@ impl Operation {
             | Self::Read { address: a, .. } => vec![a],
             Self::Binary(_, a, b) | Self::Concat(a, b) => vec![a, b],
             Self::Mux(select, a, b) => vec![select, a, b],
+            Self::SharedBinary {
+                select,
+                yes,
+                no,
+                common,
+                ..
+            } => vec![select, yes, no, common],
             Self::Constant(_) | Self::Register { .. } => vec![],
         }
     }
@@ -533,13 +548,93 @@ impl Module {
                 Operation::Read { memory, address } => known(address)
                     .filter(|&address| address >= u64::from(self.memories[memory].depth))
                     .map(|_| 0),
-                Operation::Register { .. } | Operation::Mux(..) => None,
+                Operation::Register { .. }
+                | Operation::Mux(..)
+                | Operation::SharedBinary { .. } => None,
             };
             if let Some(value) = value {
                 let value = value & mask;
                 constants[index] = Some(value);
                 driver.operation = Operation::Constant(value);
             }
+        }
+    }
+
+    /// Share wide operators in mutually exclusive, single-use mux branches.
+    pub fn share_operators(&mut self) {
+        let mut uses = vec![0; self.signals.len()];
+        for driver in self.drivers.iter().flatten() {
+            for input in driver.operation.combinational_inputs() {
+                uses[input] += 1;
+            }
+            if let Operation::Register {
+                clock, reset, data, ..
+            } = driver.operation
+            {
+                for input in [clock, reset, data] {
+                    uses[input] += 1;
+                }
+            }
+        }
+        for memory in &self.memories {
+            if let Some(write) = &memory.write {
+                for input in [write.clock, write.enable, write.address, write.data] {
+                    uses[input] += 1;
+                }
+            }
+        }
+
+        for target in 0..self.drivers.len() {
+            let Some(Driver {
+                operation: Operation::Mux(select, yes, no),
+                ..
+            }) = self.drivers[target].as_ref()
+            else {
+                continue;
+            };
+            let (select, yes, no) = (*select, *yes, *no);
+            if [yes, no]
+                .into_iter()
+                .any(|index| uses[index] != 1 || self.signals[index].direction != Direction::Wire)
+            {
+                continue;
+            }
+            let (
+                Some(Driver {
+                    operation: Operation::Binary(op, a, b),
+                    ..
+                }),
+                Some(Driver {
+                    operation: Operation::Binary(other, c, d),
+                    ..
+                }),
+            ) = (&self.drivers[yes], &self.drivers[no])
+            else {
+                continue;
+            };
+            if op != other || !matches!(*op, "+" | "-" | "==" | "!=") || self.signals[*a].width <= 8
+            {
+                continue;
+            }
+            let (yes, no, common, common_first) = if b == d {
+                (*a, *c, *b, false)
+            } else if a == c {
+                (*b, *d, *a, true)
+            } else if *op != "-" && a == d {
+                (*b, *c, *a, false)
+            } else if *op != "-" && b == c {
+                (*a, *d, *b, false)
+            } else {
+                continue;
+            };
+            self.drivers[target].as_mut().unwrap().operation = Operation::SharedBinary {
+                op,
+                select,
+                yes,
+                no,
+                common,
+                common_first,
+            };
         }
     }
 
@@ -644,6 +739,12 @@ impl Module {
                     writeln!(out, "  assign {target}= {{{gap}'d0, {}}};", signal(a))
                 }
                 Operation::Binary(op, a, b) => writeln!(out, "  assign {target}= {}{op} {};", signal(a), signal(b)),
+                Operation::SharedBinary { op, select, yes, no, common, common_first } => {
+                    let selected = format!("({}? {}: {})", signal(select), signal(yes), signal(no));
+                    let common = signal(common);
+                    let (left, right) = if common_first { (common, selected) } else { (selected, common) };
+                    writeln!(out, "  assign {target}= {left}{op} {right};")
+                }
                 Operation::Register { clock, reset, data, reset_value } => writeln!(out,
                     "  always_ff @(posedge {}) begin\n    if ({}) {target}<= {width}'d{reset_value};\n    else {target}<= {};\n  end",
                     signal(clock), signal(reset), signal(data)),

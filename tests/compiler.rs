@@ -144,3 +144,28 @@ end"#;
     assert!(sv.contains("assign \\wrapped = 64'd0;"));
     assert!(sv.contains("always_ff"));
 }
+
+#[test]
+fn operator_sharing_respects_other_consumers_and_subtraction_order() {
+    let source = "module share\ninput choose u1\ninput a u32\ninput b u32\ninput c u32\noutput result u32\nwire left u32\nwire right u32\ncomb left sub a c\ncomb right sub b c\ncomb result mux choose left right\nend";
+    let emit = |source: &str| {
+        let mut module = parse(source).unwrap();
+        module.share_operators();
+        module.system_verilog()
+    };
+    let shared = emit(source);
+    assert!(shared.contains("(\\choose ? \\a : \\b )- \\c "));
+    assert!(!shared.contains("\\left "));
+    let reversed = emit(&source.replace("sub b c", "sub c b"));
+    assert!(reversed.contains("\\left "));
+    assert!(reversed.contains("\\right "));
+    let with_other_use = emit(&source.replace("wire left u32", "output left u32"));
+    assert!(with_other_use.contains("\\right "));
+    let comparisons = source
+        .replace("output result u32", "output result u1")
+        .replace("wire left u32", "wire left u1")
+        .replace("wire right u32", "wire right u1")
+        .replace("sub a c", "eq c a")
+        .replace("sub b c", "eq b c");
+    assert!(emit(&comparisons).contains("(\\choose ? \\a : \\b )== \\c "));
+}

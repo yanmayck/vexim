@@ -72,7 +72,14 @@ before this elimination pass. It evaluates width-limited arithmetic,
 comparisons, slices and concatenations, folds selected branches when a
 mux selector is constant, and simplifies AND with zero and OR with
 all ones. Registers remain stateful and memory writes are preserved.
-The flag is opt-in. Builds without it keep the original emission path.
+With `--opt-area`, a mux may also share two additions, subtractions,
+equalities, or inequalities over operands wider than eight bits. The
+branches must use the same operator, share an operand, and have no
+other consumers. Subtraction preserves operand order. The compiler
+moves the selection before the shared operator. This rewrite preserves
+binary behavior and may change four-state simulation with an unknown
+selector. FPGA area and timing depend on the mapping. The flag is
+opt-in. Builds without it keep the original emission path.
 
 Every output and wire must have exactly one driver. Inputs are driven by the caller. The compiler rejects combinational cycles, including cycles through multiplexer selectors. Feedback through a register is allowed. Compiler diagnostics identify the source line, and generated SystemVerilog includes the source line alongside each driver.
 
