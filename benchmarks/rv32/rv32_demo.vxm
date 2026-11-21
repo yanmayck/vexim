@@ -1,0 +1,891 @@
+# Complete implementation of the rv32_demo seven-instruction profile.
+module rv32_demo
+input clk u1
+input rst u1
+input instr u32
+input mem_rdata u32
+output pc u32
+output mem_addr u32
+output mem_wdata u32
+output mem_write u1
+output mem_read u1
+output illegal u1
+wire one u1
+comb one const 1
+wire zero2 u2
+comb zero2 const 0
+wire zero3 u3
+comb zero3 const 0
+wire zero5 u5
+comb zero5 const 0
+wire zero12 u12
+comb zero12 const 0
+wire zero32 u32
+comb zero32 const 0
+wire four u32
+comb four const 4
+wire word_funct u3
+comb word_funct const 2
+wire add_funct u7
+comb add_funct const 0
+wire sub_funct u7
+comb sub_funct const 32
+wire sign20mask u20
+comb sign20mask const 1048575
+wire zero20 u20
+comb zero20 const 0
+wire zero1 u1
+comb zero1 const 0
+wire opcode u7
+comb opcode slice instr 6 0
+wire rd u5
+comb rd slice instr 11 7
+wire funct u3
+comb funct slice instr 14 12
+wire rs1 u5
+comb rs1 slice instr 19 15
+wire rs2 u5
+comb rs2 slice instr 24 20
+wire funct7 u7
+comb funct7 slice instr 31 25
+wire sign u1
+comb sign slice instr 31 31
+wire imm_i u12
+comb imm_i slice instr 31 20
+wire imm_hi u7
+comb imm_hi slice instr 31 25
+wire imm_u u20
+comb imm_u slice instr 31 12
+wire branch_11 u1
+comb branch_11 slice instr 7 7
+wire branch_mid u6
+comb branch_mid slice instr 30 25
+wire branch_low u4
+comb branch_low slice instr 11 8
+wire op_lui u7
+comb op_lui const 55
+wire dec_lui u1
+comb dec_lui eq opcode op_lui
+wire op_addi u7
+comb op_addi const 19
+wire dec_addi u1
+comb dec_addi eq opcode op_addi
+wire op_regop u7
+comb op_regop const 51
+wire dec_regop u1
+comb dec_regop eq opcode op_regop
+wire op_beq u7
+comb op_beq const 99
+wire dec_beq u1
+comb dec_beq eq opcode op_beq
+wire op_lw u7
+comb op_lw const 3
+wire dec_lw u1
+comb dec_lw eq opcode op_lw
+wire op_sw u7
+comb op_sw const 35
+wire dec_sw u1
+comb dec_sw eq opcode op_sw
+
+# Register file: two asynchronous reads, synchronous writes, x0 hardwired.
+mem registers u32 32
+wire raw_a u32
+comb raw_a read registers rs1
+wire raw_b u32
+comb raw_b read registers rs2
+wire idx1 u5
+comb idx1 const 1
+wire en1 u1
+comb en1 eq rd idx1
+wire we1 u1
+comb we1 and write_enable en1
+wire v1 u1
+wire nv1 u1
+comb nv1 or v1 we1
+sync v1 clk rst nv1
+wire idx2 u5
+comb idx2 const 2
+wire en2 u1
+comb en2 eq rd idx2
+wire we2 u1
+comb we2 and write_enable en2
+wire v2 u1
+wire nv2 u1
+comb nv2 or v2 we2
+sync v2 clk rst nv2
+wire idx3 u5
+comb idx3 const 3
+wire en3 u1
+comb en3 eq rd idx3
+wire we3 u1
+comb we3 and write_enable en3
+wire v3 u1
+wire nv3 u1
+comb nv3 or v3 we3
+sync v3 clk rst nv3
+wire idx4 u5
+comb idx4 const 4
+wire en4 u1
+comb en4 eq rd idx4
+wire we4 u1
+comb we4 and write_enable en4
+wire v4 u1
+wire nv4 u1
+comb nv4 or v4 we4
+sync v4 clk rst nv4
+wire idx5 u5
+comb idx5 const 5
+wire en5 u1
+comb en5 eq rd idx5
+wire we5 u1
+comb we5 and write_enable en5
+wire v5 u1
+wire nv5 u1
+comb nv5 or v5 we5
+sync v5 clk rst nv5
+wire idx6 u5
+comb idx6 const 6
+wire en6 u1
+comb en6 eq rd idx6
+wire we6 u1
+comb we6 and write_enable en6
+wire v6 u1
+wire nv6 u1
+comb nv6 or v6 we6
+sync v6 clk rst nv6
+wire idx7 u5
+comb idx7 const 7
+wire en7 u1
+comb en7 eq rd idx7
+wire we7 u1
+comb we7 and write_enable en7
+wire v7 u1
+wire nv7 u1
+comb nv7 or v7 we7
+sync v7 clk rst nv7
+wire idx8 u5
+comb idx8 const 8
+wire en8 u1
+comb en8 eq rd idx8
+wire we8 u1
+comb we8 and write_enable en8
+wire v8 u1
+wire nv8 u1
+comb nv8 or v8 we8
+sync v8 clk rst nv8
+wire idx9 u5
+comb idx9 const 9
+wire en9 u1
+comb en9 eq rd idx9
+wire we9 u1
+comb we9 and write_enable en9
+wire v9 u1
+wire nv9 u1
+comb nv9 or v9 we9
+sync v9 clk rst nv9
+wire idx10 u5
+comb idx10 const 10
+wire en10 u1
+comb en10 eq rd idx10
+wire we10 u1
+comb we10 and write_enable en10
+wire v10 u1
+wire nv10 u1
+comb nv10 or v10 we10
+sync v10 clk rst nv10
+wire idx11 u5
+comb idx11 const 11
+wire en11 u1
+comb en11 eq rd idx11
+wire we11 u1
+comb we11 and write_enable en11
+wire v11 u1
+wire nv11 u1
+comb nv11 or v11 we11
+sync v11 clk rst nv11
+wire idx12 u5
+comb idx12 const 12
+wire en12 u1
+comb en12 eq rd idx12
+wire we12 u1
+comb we12 and write_enable en12
+wire v12 u1
+wire nv12 u1
+comb nv12 or v12 we12
+sync v12 clk rst nv12
+wire idx13 u5
+comb idx13 const 13
+wire en13 u1
+comb en13 eq rd idx13
+wire we13 u1
+comb we13 and write_enable en13
+wire v13 u1
+wire nv13 u1
+comb nv13 or v13 we13
+sync v13 clk rst nv13
+wire idx14 u5
+comb idx14 const 14
+wire en14 u1
+comb en14 eq rd idx14
+wire we14 u1
+comb we14 and write_enable en14
+wire v14 u1
+wire nv14 u1
+comb nv14 or v14 we14
+sync v14 clk rst nv14
+wire idx15 u5
+comb idx15 const 15
+wire en15 u1
+comb en15 eq rd idx15
+wire we15 u1
+comb we15 and write_enable en15
+wire v15 u1
+wire nv15 u1
+comb nv15 or v15 we15
+sync v15 clk rst nv15
+wire idx16 u5
+comb idx16 const 16
+wire en16 u1
+comb en16 eq rd idx16
+wire we16 u1
+comb we16 and write_enable en16
+wire v16 u1
+wire nv16 u1
+comb nv16 or v16 we16
+sync v16 clk rst nv16
+wire idx17 u5
+comb idx17 const 17
+wire en17 u1
+comb en17 eq rd idx17
+wire we17 u1
+comb we17 and write_enable en17
+wire v17 u1
+wire nv17 u1
+comb nv17 or v17 we17
+sync v17 clk rst nv17
+wire idx18 u5
+comb idx18 const 18
+wire en18 u1
+comb en18 eq rd idx18
+wire we18 u1
+comb we18 and write_enable en18
+wire v18 u1
+wire nv18 u1
+comb nv18 or v18 we18
+sync v18 clk rst nv18
+wire idx19 u5
+comb idx19 const 19
+wire en19 u1
+comb en19 eq rd idx19
+wire we19 u1
+comb we19 and write_enable en19
+wire v19 u1
+wire nv19 u1
+comb nv19 or v19 we19
+sync v19 clk rst nv19
+wire idx20 u5
+comb idx20 const 20
+wire en20 u1
+comb en20 eq rd idx20
+wire we20 u1
+comb we20 and write_enable en20
+wire v20 u1
+wire nv20 u1
+comb nv20 or v20 we20
+sync v20 clk rst nv20
+wire idx21 u5
+comb idx21 const 21
+wire en21 u1
+comb en21 eq rd idx21
+wire we21 u1
+comb we21 and write_enable en21
+wire v21 u1
+wire nv21 u1
+comb nv21 or v21 we21
+sync v21 clk rst nv21
+wire idx22 u5
+comb idx22 const 22
+wire en22 u1
+comb en22 eq rd idx22
+wire we22 u1
+comb we22 and write_enable en22
+wire v22 u1
+wire nv22 u1
+comb nv22 or v22 we22
+sync v22 clk rst nv22
+wire idx23 u5
+comb idx23 const 23
+wire en23 u1
+comb en23 eq rd idx23
+wire we23 u1
+comb we23 and write_enable en23
+wire v23 u1
+wire nv23 u1
+comb nv23 or v23 we23
+sync v23 clk rst nv23
+wire idx24 u5
+comb idx24 const 24
+wire en24 u1
+comb en24 eq rd idx24
+wire we24 u1
+comb we24 and write_enable en24
+wire v24 u1
+wire nv24 u1
+comb nv24 or v24 we24
+sync v24 clk rst nv24
+wire idx25 u5
+comb idx25 const 25
+wire en25 u1
+comb en25 eq rd idx25
+wire we25 u1
+comb we25 and write_enable en25
+wire v25 u1
+wire nv25 u1
+comb nv25 or v25 we25
+sync v25 clk rst nv25
+wire idx26 u5
+comb idx26 const 26
+wire en26 u1
+comb en26 eq rd idx26
+wire we26 u1
+comb we26 and write_enable en26
+wire v26 u1
+wire nv26 u1
+comb nv26 or v26 we26
+sync v26 clk rst nv26
+wire idx27 u5
+comb idx27 const 27
+wire en27 u1
+comb en27 eq rd idx27
+wire we27 u1
+comb we27 and write_enable en27
+wire v27 u1
+wire nv27 u1
+comb nv27 or v27 we27
+sync v27 clk rst nv27
+wire idx28 u5
+comb idx28 const 28
+wire en28 u1
+comb en28 eq rd idx28
+wire we28 u1
+comb we28 and write_enable en28
+wire v28 u1
+wire nv28 u1
+comb nv28 or v28 we28
+sync v28 clk rst nv28
+wire idx29 u5
+comb idx29 const 29
+wire en29 u1
+comb en29 eq rd idx29
+wire we29 u1
+comb we29 and write_enable en29
+wire v29 u1
+wire nv29 u1
+comb nv29 or v29 we29
+sync v29 clk rst nv29
+wire idx30 u5
+comb idx30 const 30
+wire en30 u1
+comb en30 eq rd idx30
+wire we30 u1
+comb we30 and write_enable en30
+wire v30 u1
+wire nv30 u1
+comb nv30 or v30 we30
+sync v30 clk rst nv30
+wire idx31 u5
+comb idx31 const 31
+wire en31 u1
+comb en31 eq rd idx31
+wire we31 u1
+comb we31 and write_enable en31
+wire v31 u1
+wire nv31 u1
+comb nv31 or v31 we31
+sync v31 clk rst nv31
+wire rs1_is1 u1
+comb rs1_is1 eq rs1 idx1
+wire rs1_hit1 u1
+comb rs1_hit1 and rs1_is1 v1
+wire rs1_is2 u1
+comb rs1_is2 eq rs1 idx2
+wire rs1_hit2 u1
+comb rs1_hit2 and rs1_is2 v2
+wire rs1_is3 u1
+comb rs1_is3 eq rs1 idx3
+wire rs1_hit3 u1
+comb rs1_hit3 and rs1_is3 v3
+wire rs1_is4 u1
+comb rs1_is4 eq rs1 idx4
+wire rs1_hit4 u1
+comb rs1_hit4 and rs1_is4 v4
+wire rs1_is5 u1
+comb rs1_is5 eq rs1 idx5
+wire rs1_hit5 u1
+comb rs1_hit5 and rs1_is5 v5
+wire rs1_is6 u1
+comb rs1_is6 eq rs1 idx6
+wire rs1_hit6 u1
+comb rs1_hit6 and rs1_is6 v6
+wire rs1_is7 u1
+comb rs1_is7 eq rs1 idx7
+wire rs1_hit7 u1
+comb rs1_hit7 and rs1_is7 v7
+wire rs1_is8 u1
+comb rs1_is8 eq rs1 idx8
+wire rs1_hit8 u1
+comb rs1_hit8 and rs1_is8 v8
+wire rs1_is9 u1
+comb rs1_is9 eq rs1 idx9
+wire rs1_hit9 u1
+comb rs1_hit9 and rs1_is9 v9
+wire rs1_is10 u1
+comb rs1_is10 eq rs1 idx10
+wire rs1_hit10 u1
+comb rs1_hit10 and rs1_is10 v10
+wire rs1_is11 u1
+comb rs1_is11 eq rs1 idx11
+wire rs1_hit11 u1
+comb rs1_hit11 and rs1_is11 v11
+wire rs1_is12 u1
+comb rs1_is12 eq rs1 idx12
+wire rs1_hit12 u1
+comb rs1_hit12 and rs1_is12 v12
+wire rs1_is13 u1
+comb rs1_is13 eq rs1 idx13
+wire rs1_hit13 u1
+comb rs1_hit13 and rs1_is13 v13
+wire rs1_is14 u1
+comb rs1_is14 eq rs1 idx14
+wire rs1_hit14 u1
+comb rs1_hit14 and rs1_is14 v14
+wire rs1_is15 u1
+comb rs1_is15 eq rs1 idx15
+wire rs1_hit15 u1
+comb rs1_hit15 and rs1_is15 v15
+wire rs1_is16 u1
+comb rs1_is16 eq rs1 idx16
+wire rs1_hit16 u1
+comb rs1_hit16 and rs1_is16 v16
+wire rs1_is17 u1
+comb rs1_is17 eq rs1 idx17
+wire rs1_hit17 u1
+comb rs1_hit17 and rs1_is17 v17
+wire rs1_is18 u1
+comb rs1_is18 eq rs1 idx18
+wire rs1_hit18 u1
+comb rs1_hit18 and rs1_is18 v18
+wire rs1_is19 u1
+comb rs1_is19 eq rs1 idx19
+wire rs1_hit19 u1
+comb rs1_hit19 and rs1_is19 v19
+wire rs1_is20 u1
+comb rs1_is20 eq rs1 idx20
+wire rs1_hit20 u1
+comb rs1_hit20 and rs1_is20 v20
+wire rs1_is21 u1
+comb rs1_is21 eq rs1 idx21
+wire rs1_hit21 u1
+comb rs1_hit21 and rs1_is21 v21
+wire rs1_is22 u1
+comb rs1_is22 eq rs1 idx22
+wire rs1_hit22 u1
+comb rs1_hit22 and rs1_is22 v22
+wire rs1_is23 u1
+comb rs1_is23 eq rs1 idx23
+wire rs1_hit23 u1
+comb rs1_hit23 and rs1_is23 v23
+wire rs1_is24 u1
+comb rs1_is24 eq rs1 idx24
+wire rs1_hit24 u1
+comb rs1_hit24 and rs1_is24 v24
+wire rs1_is25 u1
+comb rs1_is25 eq rs1 idx25
+wire rs1_hit25 u1
+comb rs1_hit25 and rs1_is25 v25
+wire rs1_is26 u1
+comb rs1_is26 eq rs1 idx26
+wire rs1_hit26 u1
+comb rs1_hit26 and rs1_is26 v26
+wire rs1_is27 u1
+comb rs1_is27 eq rs1 idx27
+wire rs1_hit27 u1
+comb rs1_hit27 and rs1_is27 v27
+wire rs1_is28 u1
+comb rs1_is28 eq rs1 idx28
+wire rs1_hit28 u1
+comb rs1_hit28 and rs1_is28 v28
+wire rs1_is29 u1
+comb rs1_is29 eq rs1 idx29
+wire rs1_hit29 u1
+comb rs1_hit29 and rs1_is29 v29
+wire rs1_is30 u1
+comb rs1_is30 eq rs1 idx30
+wire rs1_hit30 u1
+comb rs1_hit30 and rs1_is30 v30
+wire rs1_is31 u1
+comb rs1_is31 eq rs1 idx31
+wire rs1_hit31 u1
+comb rs1_hit31 and rs1_is31 v31
+wire rs1_hit1_or u1
+comb rs1_hit1_or or rs1_hit1 rs1_hit2
+wire rs1_hit3_or u1
+comb rs1_hit3_or or rs1_hit3 rs1_hit4
+wire rs1_hit5_or u1
+comb rs1_hit5_or or rs1_hit5 rs1_hit6
+wire rs1_hit7_or u1
+comb rs1_hit7_or or rs1_hit7 rs1_hit8
+wire rs1_hit9_or u1
+comb rs1_hit9_or or rs1_hit9 rs1_hit10
+wire rs1_hit11_or u1
+comb rs1_hit11_or or rs1_hit11 rs1_hit12
+wire rs1_hit13_or u1
+comb rs1_hit13_or or rs1_hit13 rs1_hit14
+wire rs1_hit15_or u1
+comb rs1_hit15_or or rs1_hit15 rs1_hit16
+wire rs1_hit17_or u1
+comb rs1_hit17_or or rs1_hit17 rs1_hit18
+wire rs1_hit19_or u1
+comb rs1_hit19_or or rs1_hit19 rs1_hit20
+wire rs1_hit21_or u1
+comb rs1_hit21_or or rs1_hit21 rs1_hit22
+wire rs1_hit23_or u1
+comb rs1_hit23_or or rs1_hit23 rs1_hit24
+wire rs1_hit25_or u1
+comb rs1_hit25_or or rs1_hit25 rs1_hit26
+wire rs1_hit27_or u1
+comb rs1_hit27_or or rs1_hit27 rs1_hit28
+wire rs1_hit29_or u1
+comb rs1_hit29_or or rs1_hit29 rs1_hit30
+wire rs1_hit1_or_or u1
+comb rs1_hit1_or_or or rs1_hit1_or rs1_hit3_or
+wire rs1_hit5_or_or u1
+comb rs1_hit5_or_or or rs1_hit5_or rs1_hit7_or
+wire rs1_hit9_or_or u1
+comb rs1_hit9_or_or or rs1_hit9_or rs1_hit11_or
+wire rs1_hit13_or_or u1
+comb rs1_hit13_or_or or rs1_hit13_or rs1_hit15_or
+wire rs1_hit17_or_or u1
+comb rs1_hit17_or_or or rs1_hit17_or rs1_hit19_or
+wire rs1_hit21_or_or u1
+comb rs1_hit21_or_or or rs1_hit21_or rs1_hit23_or
+wire rs1_hit25_or_or u1
+comb rs1_hit25_or_or or rs1_hit25_or rs1_hit27_or
+wire rs1_hit29_or_or u1
+comb rs1_hit29_or_or or rs1_hit29_or rs1_hit31
+wire rs1_hit1_or_or_or u1
+comb rs1_hit1_or_or_or or rs1_hit1_or_or rs1_hit5_or_or
+wire rs1_hit9_or_or_or u1
+comb rs1_hit9_or_or_or or rs1_hit9_or_or rs1_hit13_or_or
+wire rs1_hit17_or_or_or u1
+comb rs1_hit17_or_or_or or rs1_hit17_or_or rs1_hit21_or_or
+wire rs1_hit25_or_or_or u1
+comb rs1_hit25_or_or_or or rs1_hit25_or_or rs1_hit29_or_or
+wire rs1_hit1_or_or_or_or u1
+comb rs1_hit1_or_or_or_or or rs1_hit1_or_or_or rs1_hit9_or_or_or
+wire rs1_hit17_or_or_or_or u1
+comb rs1_hit17_or_or_or_or or rs1_hit17_or_or_or rs1_hit25_or_or_or
+wire rs1_hit1_or_or_or_or_or u1
+comb rs1_hit1_or_or_or_or_or or rs1_hit1_or_or_or_or rs1_hit17_or_or_or_or
+wire rs1_valid u1
+comb rs1_valid copy rs1_hit1_or_or_or_or_or
+wire rs2_is1 u1
+comb rs2_is1 eq rs2 idx1
+wire rs2_hit1 u1
+comb rs2_hit1 and rs2_is1 v1
+wire rs2_is2 u1
+comb rs2_is2 eq rs2 idx2
+wire rs2_hit2 u1
+comb rs2_hit2 and rs2_is2 v2
+wire rs2_is3 u1
+comb rs2_is3 eq rs2 idx3
+wire rs2_hit3 u1
+comb rs2_hit3 and rs2_is3 v3
+wire rs2_is4 u1
+comb rs2_is4 eq rs2 idx4
+wire rs2_hit4 u1
+comb rs2_hit4 and rs2_is4 v4
+wire rs2_is5 u1
+comb rs2_is5 eq rs2 idx5
+wire rs2_hit5 u1
+comb rs2_hit5 and rs2_is5 v5
+wire rs2_is6 u1
+comb rs2_is6 eq rs2 idx6
+wire rs2_hit6 u1
+comb rs2_hit6 and rs2_is6 v6
+wire rs2_is7 u1
+comb rs2_is7 eq rs2 idx7
+wire rs2_hit7 u1
+comb rs2_hit7 and rs2_is7 v7
+wire rs2_is8 u1
+comb rs2_is8 eq rs2 idx8
+wire rs2_hit8 u1
+comb rs2_hit8 and rs2_is8 v8
+wire rs2_is9 u1
+comb rs2_is9 eq rs2 idx9
+wire rs2_hit9 u1
+comb rs2_hit9 and rs2_is9 v9
+wire rs2_is10 u1
+comb rs2_is10 eq rs2 idx10
+wire rs2_hit10 u1
+comb rs2_hit10 and rs2_is10 v10
+wire rs2_is11 u1
+comb rs2_is11 eq rs2 idx11
+wire rs2_hit11 u1
+comb rs2_hit11 and rs2_is11 v11
+wire rs2_is12 u1
+comb rs2_is12 eq rs2 idx12
+wire rs2_hit12 u1
+comb rs2_hit12 and rs2_is12 v12
+wire rs2_is13 u1
+comb rs2_is13 eq rs2 idx13
+wire rs2_hit13 u1
+comb rs2_hit13 and rs2_is13 v13
+wire rs2_is14 u1
+comb rs2_is14 eq rs2 idx14
+wire rs2_hit14 u1
+comb rs2_hit14 and rs2_is14 v14
+wire rs2_is15 u1
+comb rs2_is15 eq rs2 idx15
+wire rs2_hit15 u1
+comb rs2_hit15 and rs2_is15 v15
+wire rs2_is16 u1
+comb rs2_is16 eq rs2 idx16
+wire rs2_hit16 u1
+comb rs2_hit16 and rs2_is16 v16
+wire rs2_is17 u1
+comb rs2_is17 eq rs2 idx17
+wire rs2_hit17 u1
+comb rs2_hit17 and rs2_is17 v17
+wire rs2_is18 u1
+comb rs2_is18 eq rs2 idx18
+wire rs2_hit18 u1
+comb rs2_hit18 and rs2_is18 v18
+wire rs2_is19 u1
+comb rs2_is19 eq rs2 idx19
+wire rs2_hit19 u1
+comb rs2_hit19 and rs2_is19 v19
+wire rs2_is20 u1
+comb rs2_is20 eq rs2 idx20
+wire rs2_hit20 u1
+comb rs2_hit20 and rs2_is20 v20
+wire rs2_is21 u1
+comb rs2_is21 eq rs2 idx21
+wire rs2_hit21 u1
+comb rs2_hit21 and rs2_is21 v21
+wire rs2_is22 u1
+comb rs2_is22 eq rs2 idx22
+wire rs2_hit22 u1
+comb rs2_hit22 and rs2_is22 v22
+wire rs2_is23 u1
+comb rs2_is23 eq rs2 idx23
+wire rs2_hit23 u1
+comb rs2_hit23 and rs2_is23 v23
+wire rs2_is24 u1
+comb rs2_is24 eq rs2 idx24
+wire rs2_hit24 u1
+comb rs2_hit24 and rs2_is24 v24
+wire rs2_is25 u1
+comb rs2_is25 eq rs2 idx25
+wire rs2_hit25 u1
+comb rs2_hit25 and rs2_is25 v25
+wire rs2_is26 u1
+comb rs2_is26 eq rs2 idx26
+wire rs2_hit26 u1
+comb rs2_hit26 and rs2_is26 v26
+wire rs2_is27 u1
+comb rs2_is27 eq rs2 idx27
+wire rs2_hit27 u1
+comb rs2_hit27 and rs2_is27 v27
+wire rs2_is28 u1
+comb rs2_is28 eq rs2 idx28
+wire rs2_hit28 u1
+comb rs2_hit28 and rs2_is28 v28
+wire rs2_is29 u1
+comb rs2_is29 eq rs2 idx29
+wire rs2_hit29 u1
+comb rs2_hit29 and rs2_is29 v29
+wire rs2_is30 u1
+comb rs2_is30 eq rs2 idx30
+wire rs2_hit30 u1
+comb rs2_hit30 and rs2_is30 v30
+wire rs2_is31 u1
+comb rs2_is31 eq rs2 idx31
+wire rs2_hit31 u1
+comb rs2_hit31 and rs2_is31 v31
+wire rs2_hit1_or u1
+comb rs2_hit1_or or rs2_hit1 rs2_hit2
+wire rs2_hit3_or u1
+comb rs2_hit3_or or rs2_hit3 rs2_hit4
+wire rs2_hit5_or u1
+comb rs2_hit5_or or rs2_hit5 rs2_hit6
+wire rs2_hit7_or u1
+comb rs2_hit7_or or rs2_hit7 rs2_hit8
+wire rs2_hit9_or u1
+comb rs2_hit9_or or rs2_hit9 rs2_hit10
+wire rs2_hit11_or u1
+comb rs2_hit11_or or rs2_hit11 rs2_hit12
+wire rs2_hit13_or u1
+comb rs2_hit13_or or rs2_hit13 rs2_hit14
+wire rs2_hit15_or u1
+comb rs2_hit15_or or rs2_hit15 rs2_hit16
+wire rs2_hit17_or u1
+comb rs2_hit17_or or rs2_hit17 rs2_hit18
+wire rs2_hit19_or u1
+comb rs2_hit19_or or rs2_hit19 rs2_hit20
+wire rs2_hit21_or u1
+comb rs2_hit21_or or rs2_hit21 rs2_hit22
+wire rs2_hit23_or u1
+comb rs2_hit23_or or rs2_hit23 rs2_hit24
+wire rs2_hit25_or u1
+comb rs2_hit25_or or rs2_hit25 rs2_hit26
+wire rs2_hit27_or u1
+comb rs2_hit27_or or rs2_hit27 rs2_hit28
+wire rs2_hit29_or u1
+comb rs2_hit29_or or rs2_hit29 rs2_hit30
+wire rs2_hit1_or_or u1
+comb rs2_hit1_or_or or rs2_hit1_or rs2_hit3_or
+wire rs2_hit5_or_or u1
+comb rs2_hit5_or_or or rs2_hit5_or rs2_hit7_or
+wire rs2_hit9_or_or u1
+comb rs2_hit9_or_or or rs2_hit9_or rs2_hit11_or
+wire rs2_hit13_or_or u1
+comb rs2_hit13_or_or or rs2_hit13_or rs2_hit15_or
+wire rs2_hit17_or_or u1
+comb rs2_hit17_or_or or rs2_hit17_or rs2_hit19_or
+wire rs2_hit21_or_or u1
+comb rs2_hit21_or_or or rs2_hit21_or rs2_hit23_or
+wire rs2_hit25_or_or u1
+comb rs2_hit25_or_or or rs2_hit25_or rs2_hit27_or
+wire rs2_hit29_or_or u1
+comb rs2_hit29_or_or or rs2_hit29_or rs2_hit31
+wire rs2_hit1_or_or_or u1
+comb rs2_hit1_or_or_or or rs2_hit1_or_or rs2_hit5_or_or
+wire rs2_hit9_or_or_or u1
+comb rs2_hit9_or_or_or or rs2_hit9_or_or rs2_hit13_or_or
+wire rs2_hit17_or_or_or u1
+comb rs2_hit17_or_or_or or rs2_hit17_or_or rs2_hit21_or_or
+wire rs2_hit25_or_or_or u1
+comb rs2_hit25_or_or_or or rs2_hit25_or_or rs2_hit29_or_or
+wire rs2_hit1_or_or_or_or u1
+comb rs2_hit1_or_or_or_or or rs2_hit1_or_or_or rs2_hit9_or_or_or
+wire rs2_hit17_or_or_or_or u1
+comb rs2_hit17_or_or_or_or or rs2_hit17_or_or_or rs2_hit25_or_or_or
+wire rs2_hit1_or_or_or_or_or u1
+comb rs2_hit1_or_or_or_or_or or rs2_hit1_or_or_or_or rs2_hit17_or_or_or_or
+wire rs2_valid u1
+comb rs2_valid copy rs2_hit1_or_or_or_or_or
+wire a u32
+comb a mux rs1_valid raw_a zero32
+wire b u32
+comb b mux rs2_valid raw_b zero32
+
+# Decode, sign extension, arithmetic, and bus controls.
+wire funct_zero u1
+comb funct_zero eq funct zero3
+wire funct_word u1
+comb funct_word eq funct word_funct
+wire add_f7 u1
+comb add_f7 eq funct7 add_funct
+wire sub_f7 u1
+comb sub_f7 eq funct7 sub_funct
+wire add_sub_f7 u1
+comb add_sub_f7 or add_f7 sub_f7
+wire reg_funct u1
+comb reg_funct and funct_zero add_sub_f7
+wire reg_ok u1
+comb reg_ok and dec_regop reg_funct
+wire addi_ok u1
+comb addi_ok and dec_addi funct_zero
+wire beq_kind u1
+comb beq_kind and dec_beq funct_zero
+wire upper_sign u20
+comb upper_sign mux sign sign20mask zero20
+wire imm_s u12
+comb imm_s concat imm_hi rd
+wire imm_data u12
+comb imm_data mux dec_sw imm_s imm_i
+wire imm_data32 u32
+comb imm_data32 concat upper_sign imm_data
+wire addr u32
+comb addr add a imm_data32
+wire addr_low u2
+comb addr_low slice addr 1 0
+wire addr_aligned u1
+comb addr_aligned eq addr_low zero2
+wire mem_kind u1
+comb mem_kind or dec_lw dec_sw
+wire mem_shape_ok u1
+comb mem_shape_ok and funct_word addr_aligned
+wire mem_ok u1
+comb mem_ok and mem_kind mem_shape_ok
+wire mem_load u1
+comb mem_load and dec_lw mem_shape_ok
+wire mem_store u1
+comb mem_store and dec_sw mem_shape_ok
+wire not_reset u1
+comb not_reset xor rst one
+wire branch_tail u5
+comb branch_tail concat branch_low zero1
+wire branch_body u11
+comb branch_body concat branch_mid branch_tail
+wire branch_imm u12
+comb branch_imm concat branch_11 branch_body
+wire branch_offset u32
+comb branch_offset concat upper_sign branch_imm
+wire next_seq u32
+comb next_seq add pc four
+wire branch_dest u32
+comb branch_dest add pc branch_offset
+wire equal_ab u1
+comb equal_ab eq a b
+wire branch_taken u1
+comb branch_taken and beq_kind equal_ab
+wire candidate_pc u32
+comb candidate_pc mux branch_taken branch_dest next_seq
+wire pc_low u2
+comb pc_low slice candidate_pc 1 0
+wire pc_aligned u1
+comb pc_aligned eq pc_low zero2
+wire beq_ok u1
+comb beq_ok and beq_kind pc_aligned
+wire legal_alu u1
+comb legal_alu or reg_ok addi_ok
+wire legal_calc u1
+comb legal_calc or legal_alu dec_lui
+wire legal_flow u1
+comb legal_flow or beq_ok mem_ok
+wire legal u1
+comb legal or legal_calc legal_flow
+wire next_pc u32
+comb next_pc mux legal candidate_pc pc
+wire reg_add u32
+comb reg_add add a b
+wire reg_sub u32
+comb reg_sub sub a b
+wire reg_value u32
+comb reg_value mux sub_f7 reg_sub reg_add
+wire lui_value u32
+comb lui_value concat imm_u zero12
+wire alu_value u32
+comb alu_value mux dec_regop reg_value addr
+wire alu_or_u u32
+comb alu_or_u mux dec_lui lui_value alu_value
+wire result u32
+comb result mux dec_lw mem_rdata alu_or_u
+wire has_result u1
+comb has_result or legal_calc mem_load
+wire rd_nonzero u1
+comb rd_nonzero ne rd zero5
+wire write_rd u1
+comb write_rd and has_result rd_nonzero
+wire write_enable u1
+comb write_enable and write_rd not_reset
+comb illegal xor legal one
+comb mem_addr mux mem_kind addr zero32
+comb mem_wdata copy b
+comb mem_read and mem_load not_reset
+comb mem_write and mem_store not_reset
+sync pc clk rst next_pc
+write registers clk write_enable rd result
+end

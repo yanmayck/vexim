@@ -1,0 +1,651 @@
+# Complete implementation of the rv32_demo seven-instruction profile.
+module rv32_demo
+input clk u1
+input rst u1
+input instr u32
+input mem_rdata u32
+output pc u32
+output mem_addr u32
+output mem_wdata u32
+output mem_write u1
+output mem_read u1
+output illegal u1
+wire one u1
+comb one const 1
+wire zero2 u2
+comb zero2 const 0
+wire zero3 u3
+comb zero3 const 0
+wire zero5 u5
+comb zero5 const 0
+wire zero12 u12
+comb zero12 const 0
+wire zero32 u32
+comb zero32 const 0
+wire four u32
+comb four const 4
+wire word_funct u3
+comb word_funct const 2
+wire add_funct u7
+comb add_funct const 0
+wire sub_funct u7
+comb sub_funct const 32
+wire sign20mask u20
+comb sign20mask const 1048575
+wire zero20 u20
+comb zero20 const 0
+wire zero1 u1
+comb zero1 const 0
+wire opcode u7
+comb opcode slice instr 6 0
+wire rd u5
+comb rd slice instr 11 7
+wire funct u3
+comb funct slice instr 14 12
+wire rs1 u5
+comb rs1 slice instr 19 15
+wire rs2 u5
+comb rs2 slice instr 24 20
+wire funct7 u7
+comb funct7 slice instr 31 25
+wire sign u1
+comb sign slice instr 31 31
+wire imm_i u12
+comb imm_i slice instr 31 20
+wire imm_hi u7
+comb imm_hi slice instr 31 25
+wire imm_u u20
+comb imm_u slice instr 31 12
+wire branch_11 u1
+comb branch_11 slice instr 7 7
+wire branch_mid u6
+comb branch_mid slice instr 30 25
+wire branch_low u4
+comb branch_low slice instr 11 8
+wire op_lui u7
+comb op_lui const 55
+wire dec_lui u1
+comb dec_lui eq opcode op_lui
+wire op_addi u7
+comb op_addi const 19
+wire dec_addi u1
+comb dec_addi eq opcode op_addi
+wire op_regop u7
+comb op_regop const 51
+wire dec_regop u1
+comb dec_regop eq opcode op_regop
+wire op_beq u7
+comb op_beq const 99
+wire dec_beq u1
+comb dec_beq eq opcode op_beq
+wire op_lw u7
+comb op_lw const 3
+wire dec_lw u1
+comb dec_lw eq opcode op_lw
+wire op_sw u7
+comb op_sw const 35
+wire dec_sw u1
+comb dec_sw eq opcode op_sw
+
+# Register file: resettable registers, two balanced read trees, and hardwired x0.
+wire idx1 u5
+comb idx1 const 1
+wire sel1 u1
+comb sel1 eq rd idx1
+wire we1 u1
+comb we1 and write_rd sel1
+wire x1 u32
+wire nx1 u32
+comb nx1 mux we1 result x1
+sync x1 clk rst nx1
+wire idx2 u5
+comb idx2 const 2
+wire sel2 u1
+comb sel2 eq rd idx2
+wire we2 u1
+comb we2 and write_rd sel2
+wire x2 u32
+wire nx2 u32
+comb nx2 mux we2 result x2
+sync x2 clk rst nx2
+wire idx3 u5
+comb idx3 const 3
+wire sel3 u1
+comb sel3 eq rd idx3
+wire we3 u1
+comb we3 and write_rd sel3
+wire x3 u32
+wire nx3 u32
+comb nx3 mux we3 result x3
+sync x3 clk rst nx3
+wire idx4 u5
+comb idx4 const 4
+wire sel4 u1
+comb sel4 eq rd idx4
+wire we4 u1
+comb we4 and write_rd sel4
+wire x4 u32
+wire nx4 u32
+comb nx4 mux we4 result x4
+sync x4 clk rst nx4
+wire idx5 u5
+comb idx5 const 5
+wire sel5 u1
+comb sel5 eq rd idx5
+wire we5 u1
+comb we5 and write_rd sel5
+wire x5 u32
+wire nx5 u32
+comb nx5 mux we5 result x5
+sync x5 clk rst nx5
+wire idx6 u5
+comb idx6 const 6
+wire sel6 u1
+comb sel6 eq rd idx6
+wire we6 u1
+comb we6 and write_rd sel6
+wire x6 u32
+wire nx6 u32
+comb nx6 mux we6 result x6
+sync x6 clk rst nx6
+wire idx7 u5
+comb idx7 const 7
+wire sel7 u1
+comb sel7 eq rd idx7
+wire we7 u1
+comb we7 and write_rd sel7
+wire x7 u32
+wire nx7 u32
+comb nx7 mux we7 result x7
+sync x7 clk rst nx7
+wire idx8 u5
+comb idx8 const 8
+wire sel8 u1
+comb sel8 eq rd idx8
+wire we8 u1
+comb we8 and write_rd sel8
+wire x8 u32
+wire nx8 u32
+comb nx8 mux we8 result x8
+sync x8 clk rst nx8
+wire idx9 u5
+comb idx9 const 9
+wire sel9 u1
+comb sel9 eq rd idx9
+wire we9 u1
+comb we9 and write_rd sel9
+wire x9 u32
+wire nx9 u32
+comb nx9 mux we9 result x9
+sync x9 clk rst nx9
+wire idx10 u5
+comb idx10 const 10
+wire sel10 u1
+comb sel10 eq rd idx10
+wire we10 u1
+comb we10 and write_rd sel10
+wire x10 u32
+wire nx10 u32
+comb nx10 mux we10 result x10
+sync x10 clk rst nx10
+wire idx11 u5
+comb idx11 const 11
+wire sel11 u1
+comb sel11 eq rd idx11
+wire we11 u1
+comb we11 and write_rd sel11
+wire x11 u32
+wire nx11 u32
+comb nx11 mux we11 result x11
+sync x11 clk rst nx11
+wire idx12 u5
+comb idx12 const 12
+wire sel12 u1
+comb sel12 eq rd idx12
+wire we12 u1
+comb we12 and write_rd sel12
+wire x12 u32
+wire nx12 u32
+comb nx12 mux we12 result x12
+sync x12 clk rst nx12
+wire idx13 u5
+comb idx13 const 13
+wire sel13 u1
+comb sel13 eq rd idx13
+wire we13 u1
+comb we13 and write_rd sel13
+wire x13 u32
+wire nx13 u32
+comb nx13 mux we13 result x13
+sync x13 clk rst nx13
+wire idx14 u5
+comb idx14 const 14
+wire sel14 u1
+comb sel14 eq rd idx14
+wire we14 u1
+comb we14 and write_rd sel14
+wire x14 u32
+wire nx14 u32
+comb nx14 mux we14 result x14
+sync x14 clk rst nx14
+wire idx15 u5
+comb idx15 const 15
+wire sel15 u1
+comb sel15 eq rd idx15
+wire we15 u1
+comb we15 and write_rd sel15
+wire x15 u32
+wire nx15 u32
+comb nx15 mux we15 result x15
+sync x15 clk rst nx15
+wire idx16 u5
+comb idx16 const 16
+wire sel16 u1
+comb sel16 eq rd idx16
+wire we16 u1
+comb we16 and write_rd sel16
+wire x16 u32
+wire nx16 u32
+comb nx16 mux we16 result x16
+sync x16 clk rst nx16
+wire idx17 u5
+comb idx17 const 17
+wire sel17 u1
+comb sel17 eq rd idx17
+wire we17 u1
+comb we17 and write_rd sel17
+wire x17 u32
+wire nx17 u32
+comb nx17 mux we17 result x17
+sync x17 clk rst nx17
+wire idx18 u5
+comb idx18 const 18
+wire sel18 u1
+comb sel18 eq rd idx18
+wire we18 u1
+comb we18 and write_rd sel18
+wire x18 u32
+wire nx18 u32
+comb nx18 mux we18 result x18
+sync x18 clk rst nx18
+wire idx19 u5
+comb idx19 const 19
+wire sel19 u1
+comb sel19 eq rd idx19
+wire we19 u1
+comb we19 and write_rd sel19
+wire x19 u32
+wire nx19 u32
+comb nx19 mux we19 result x19
+sync x19 clk rst nx19
+wire idx20 u5
+comb idx20 const 20
+wire sel20 u1
+comb sel20 eq rd idx20
+wire we20 u1
+comb we20 and write_rd sel20
+wire x20 u32
+wire nx20 u32
+comb nx20 mux we20 result x20
+sync x20 clk rst nx20
+wire idx21 u5
+comb idx21 const 21
+wire sel21 u1
+comb sel21 eq rd idx21
+wire we21 u1
+comb we21 and write_rd sel21
+wire x21 u32
+wire nx21 u32
+comb nx21 mux we21 result x21
+sync x21 clk rst nx21
+wire idx22 u5
+comb idx22 const 22
+wire sel22 u1
+comb sel22 eq rd idx22
+wire we22 u1
+comb we22 and write_rd sel22
+wire x22 u32
+wire nx22 u32
+comb nx22 mux we22 result x22
+sync x22 clk rst nx22
+wire idx23 u5
+comb idx23 const 23
+wire sel23 u1
+comb sel23 eq rd idx23
+wire we23 u1
+comb we23 and write_rd sel23
+wire x23 u32
+wire nx23 u32
+comb nx23 mux we23 result x23
+sync x23 clk rst nx23
+wire idx24 u5
+comb idx24 const 24
+wire sel24 u1
+comb sel24 eq rd idx24
+wire we24 u1
+comb we24 and write_rd sel24
+wire x24 u32
+wire nx24 u32
+comb nx24 mux we24 result x24
+sync x24 clk rst nx24
+wire idx25 u5
+comb idx25 const 25
+wire sel25 u1
+comb sel25 eq rd idx25
+wire we25 u1
+comb we25 and write_rd sel25
+wire x25 u32
+wire nx25 u32
+comb nx25 mux we25 result x25
+sync x25 clk rst nx25
+wire idx26 u5
+comb idx26 const 26
+wire sel26 u1
+comb sel26 eq rd idx26
+wire we26 u1
+comb we26 and write_rd sel26
+wire x26 u32
+wire nx26 u32
+comb nx26 mux we26 result x26
+sync x26 clk rst nx26
+wire idx27 u5
+comb idx27 const 27
+wire sel27 u1
+comb sel27 eq rd idx27
+wire we27 u1
+comb we27 and write_rd sel27
+wire x27 u32
+wire nx27 u32
+comb nx27 mux we27 result x27
+sync x27 clk rst nx27
+wire idx28 u5
+comb idx28 const 28
+wire sel28 u1
+comb sel28 eq rd idx28
+wire we28 u1
+comb we28 and write_rd sel28
+wire x28 u32
+wire nx28 u32
+comb nx28 mux we28 result x28
+sync x28 clk rst nx28
+wire idx29 u5
+comb idx29 const 29
+wire sel29 u1
+comb sel29 eq rd idx29
+wire we29 u1
+comb we29 and write_rd sel29
+wire x29 u32
+wire nx29 u32
+comb nx29 mux we29 result x29
+sync x29 clk rst nx29
+wire idx30 u5
+comb idx30 const 30
+wire sel30 u1
+comb sel30 eq rd idx30
+wire we30 u1
+comb we30 and write_rd sel30
+wire x30 u32
+wire nx30 u32
+comb nx30 mux we30 result x30
+sync x30 clk rst nx30
+wire idx31 u5
+comb idx31 const 31
+wire sel31 u1
+comb sel31 eq rd idx31
+wire we31 u1
+comb we31 and write_rd sel31
+wire x31 u32
+wire nx31 u32
+comb nx31 mux we31 result x31
+sync x31 clk rst nx31
+wire a_bit0 u1
+comb a_bit0 slice rs1 0 0
+wire a_0_0 u32
+comb a_0_0 mux a_bit0 x1 zero32
+wire a_0_1 u32
+comb a_0_1 mux a_bit0 x3 x2
+wire a_0_2 u32
+comb a_0_2 mux a_bit0 x5 x4
+wire a_0_3 u32
+comb a_0_3 mux a_bit0 x7 x6
+wire a_0_4 u32
+comb a_0_4 mux a_bit0 x9 x8
+wire a_0_5 u32
+comb a_0_5 mux a_bit0 x11 x10
+wire a_0_6 u32
+comb a_0_6 mux a_bit0 x13 x12
+wire a_0_7 u32
+comb a_0_7 mux a_bit0 x15 x14
+wire a_0_8 u32
+comb a_0_8 mux a_bit0 x17 x16
+wire a_0_9 u32
+comb a_0_9 mux a_bit0 x19 x18
+wire a_0_10 u32
+comb a_0_10 mux a_bit0 x21 x20
+wire a_0_11 u32
+comb a_0_11 mux a_bit0 x23 x22
+wire a_0_12 u32
+comb a_0_12 mux a_bit0 x25 x24
+wire a_0_13 u32
+comb a_0_13 mux a_bit0 x27 x26
+wire a_0_14 u32
+comb a_0_14 mux a_bit0 x29 x28
+wire a_0_15 u32
+comb a_0_15 mux a_bit0 x31 x30
+wire a_bit1 u1
+comb a_bit1 slice rs1 1 1
+wire a_1_0 u32
+comb a_1_0 mux a_bit1 a_0_1 a_0_0
+wire a_1_1 u32
+comb a_1_1 mux a_bit1 a_0_3 a_0_2
+wire a_1_2 u32
+comb a_1_2 mux a_bit1 a_0_5 a_0_4
+wire a_1_3 u32
+comb a_1_3 mux a_bit1 a_0_7 a_0_6
+wire a_1_4 u32
+comb a_1_4 mux a_bit1 a_0_9 a_0_8
+wire a_1_5 u32
+comb a_1_5 mux a_bit1 a_0_11 a_0_10
+wire a_1_6 u32
+comb a_1_6 mux a_bit1 a_0_13 a_0_12
+wire a_1_7 u32
+comb a_1_7 mux a_bit1 a_0_15 a_0_14
+wire a_bit2 u1
+comb a_bit2 slice rs1 2 2
+wire a_2_0 u32
+comb a_2_0 mux a_bit2 a_1_1 a_1_0
+wire a_2_1 u32
+comb a_2_1 mux a_bit2 a_1_3 a_1_2
+wire a_2_2 u32
+comb a_2_2 mux a_bit2 a_1_5 a_1_4
+wire a_2_3 u32
+comb a_2_3 mux a_bit2 a_1_7 a_1_6
+wire a_bit3 u1
+comb a_bit3 slice rs1 3 3
+wire a_3_0 u32
+comb a_3_0 mux a_bit3 a_2_1 a_2_0
+wire a_3_1 u32
+comb a_3_1 mux a_bit3 a_2_3 a_2_2
+wire a_bit4 u1
+comb a_bit4 slice rs1 4 4
+wire a u32
+comb a mux a_bit4 a_3_1 a_3_0
+wire b_bit0 u1
+comb b_bit0 slice rs2 0 0
+wire b_0_0 u32
+comb b_0_0 mux b_bit0 x1 zero32
+wire b_0_1 u32
+comb b_0_1 mux b_bit0 x3 x2
+wire b_0_2 u32
+comb b_0_2 mux b_bit0 x5 x4
+wire b_0_3 u32
+comb b_0_3 mux b_bit0 x7 x6
+wire b_0_4 u32
+comb b_0_4 mux b_bit0 x9 x8
+wire b_0_5 u32
+comb b_0_5 mux b_bit0 x11 x10
+wire b_0_6 u32
+comb b_0_6 mux b_bit0 x13 x12
+wire b_0_7 u32
+comb b_0_7 mux b_bit0 x15 x14
+wire b_0_8 u32
+comb b_0_8 mux b_bit0 x17 x16
+wire b_0_9 u32
+comb b_0_9 mux b_bit0 x19 x18
+wire b_0_10 u32
+comb b_0_10 mux b_bit0 x21 x20
+wire b_0_11 u32
+comb b_0_11 mux b_bit0 x23 x22
+wire b_0_12 u32
+comb b_0_12 mux b_bit0 x25 x24
+wire b_0_13 u32
+comb b_0_13 mux b_bit0 x27 x26
+wire b_0_14 u32
+comb b_0_14 mux b_bit0 x29 x28
+wire b_0_15 u32
+comb b_0_15 mux b_bit0 x31 x30
+wire b_bit1 u1
+comb b_bit1 slice rs2 1 1
+wire b_1_0 u32
+comb b_1_0 mux b_bit1 b_0_1 b_0_0
+wire b_1_1 u32
+comb b_1_1 mux b_bit1 b_0_3 b_0_2
+wire b_1_2 u32
+comb b_1_2 mux b_bit1 b_0_5 b_0_4
+wire b_1_3 u32
+comb b_1_3 mux b_bit1 b_0_7 b_0_6
+wire b_1_4 u32
+comb b_1_4 mux b_bit1 b_0_9 b_0_8
+wire b_1_5 u32
+comb b_1_5 mux b_bit1 b_0_11 b_0_10
+wire b_1_6 u32
+comb b_1_6 mux b_bit1 b_0_13 b_0_12
+wire b_1_7 u32
+comb b_1_7 mux b_bit1 b_0_15 b_0_14
+wire b_bit2 u1
+comb b_bit2 slice rs2 2 2
+wire b_2_0 u32
+comb b_2_0 mux b_bit2 b_1_1 b_1_0
+wire b_2_1 u32
+comb b_2_1 mux b_bit2 b_1_3 b_1_2
+wire b_2_2 u32
+comb b_2_2 mux b_bit2 b_1_5 b_1_4
+wire b_2_3 u32
+comb b_2_3 mux b_bit2 b_1_7 b_1_6
+wire b_bit3 u1
+comb b_bit3 slice rs2 3 3
+wire b_3_0 u32
+comb b_3_0 mux b_bit3 b_2_1 b_2_0
+wire b_3_1 u32
+comb b_3_1 mux b_bit3 b_2_3 b_2_2
+wire b_bit4 u1
+comb b_bit4 slice rs2 4 4
+wire b u32
+comb b mux b_bit4 b_3_1 b_3_0
+
+# Decode, sign extension, arithmetic, and bus controls.
+wire funct_zero u1
+comb funct_zero eq funct zero3
+wire funct_word u1
+comb funct_word eq funct word_funct
+wire add_f7 u1
+comb add_f7 eq funct7 add_funct
+wire sub_f7 u1
+comb sub_f7 eq funct7 sub_funct
+wire add_sub_f7 u1
+comb add_sub_f7 or add_f7 sub_f7
+wire reg_funct u1
+comb reg_funct and funct_zero add_sub_f7
+wire reg_ok u1
+comb reg_ok and dec_regop reg_funct
+wire addi_ok u1
+comb addi_ok and dec_addi funct_zero
+wire beq_kind u1
+comb beq_kind and dec_beq funct_zero
+wire upper_sign u20
+comb upper_sign mux sign sign20mask zero20
+wire imm_s u12
+comb imm_s concat imm_hi rd
+wire imm_data u12
+comb imm_data mux dec_sw imm_s imm_i
+wire imm_data32 u32
+comb imm_data32 concat upper_sign imm_data
+wire addr u32
+comb addr add a imm_data32
+wire addr_low u2
+comb addr_low slice addr 1 0
+wire addr_aligned u1
+comb addr_aligned eq addr_low zero2
+wire mem_kind u1
+comb mem_kind or dec_lw dec_sw
+wire mem_shape_ok u1
+comb mem_shape_ok and funct_word addr_aligned
+wire mem_ok u1
+comb mem_ok and mem_kind mem_shape_ok
+wire mem_load u1
+comb mem_load and dec_lw mem_shape_ok
+wire mem_store u1
+comb mem_store and dec_sw mem_shape_ok
+wire not_reset u1
+comb not_reset xor rst one
+wire branch_tail u5
+comb branch_tail concat branch_low zero1
+wire branch_body u11
+comb branch_body concat branch_mid branch_tail
+wire branch_imm u12
+comb branch_imm concat branch_11 branch_body
+wire branch_offset u32
+comb branch_offset concat upper_sign branch_imm
+wire next_seq u32
+comb next_seq add pc four
+wire branch_dest u32
+comb branch_dest add pc branch_offset
+wire equal_ab u1
+comb equal_ab eq a b
+wire branch_taken u1
+comb branch_taken and beq_kind equal_ab
+wire candidate_pc u32
+comb candidate_pc mux branch_taken branch_dest next_seq
+wire pc_low u2
+comb pc_low slice candidate_pc 1 0
+wire pc_aligned u1
+comb pc_aligned eq pc_low zero2
+wire beq_ok u1
+comb beq_ok and beq_kind pc_aligned
+wire legal_alu u1
+comb legal_alu or reg_ok addi_ok
+wire legal_calc u1
+comb legal_calc or legal_alu dec_lui
+wire legal_flow u1
+comb legal_flow or beq_ok mem_ok
+wire legal u1
+comb legal or legal_calc legal_flow
+wire next_pc u32
+comb next_pc mux legal candidate_pc pc
+wire reg_add u32
+comb reg_add add a b
+wire reg_sub u32
+comb reg_sub sub a b
+wire reg_value u32
+comb reg_value mux sub_f7 reg_sub reg_add
+wire lui_value u32
+comb lui_value concat imm_u zero12
+wire alu_value u32
+comb alu_value mux dec_regop reg_value addr
+wire alu_or_u u32
+comb alu_or_u mux dec_lui lui_value alu_value
+wire result u32
+comb result mux dec_lw mem_rdata alu_or_u
+wire has_result u1
+comb has_result or legal_calc mem_load
+wire rd_nonzero u1
+comb rd_nonzero ne rd zero5
+wire write_rd u1
+comb write_rd and has_result rd_nonzero
+comb illegal xor legal one
+comb mem_addr mux mem_kind addr zero32
+comb mem_wdata copy b
+comb mem_read and mem_load not_reset
+comb mem_write and mem_store not_reset
+sync pc clk rst next_pc
+end
