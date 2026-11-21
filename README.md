@@ -31,6 +31,10 @@ sh run_benchmarks.sh
 The first run downloads and builds the tool image. Cached runs complete in
 seconds on the development machine. Synthesis times depend on the host.
 
+A separate [SERV RISC-V memory-interface port](benchmarks/serv/README.md)
+matched upstream LUT4 count and median routed Fmax, with formal equivalence
+for the fixed one-bit profile.
+
 ## Write and compile hardware
 
 Install from source:

@@ -1,0 +1,87 @@
+# Derived from serv_mem_if.v, copyright 2018 Olof Kindgren, ISC.
+# SERV configuration W=1, WITH_CSR=1.
+module serv_mem_core
+input i_clk u1
+input reset_unused u1
+input i_bytecnt u2
+input i_lsb u2
+input i_signed u1
+input i_word u1
+input i_half u1
+input i_mdu_op u1
+input i_bufreg2_q u1
+output o_misalign u1
+output o_rd u1
+output o_wb_sel u4
+wire zero u2
+wire one u2
+wire two u2
+wire three u2
+wire byte_zero u1
+wire byte_high u1
+wire byte_low_half u1
+wire valid_half u1
+wire valid_word u1
+wire valid_base u1
+wire valid u1
+wire signbit u1
+wire sign_next u1
+wire sign_fill u1
+wire low u1
+wire high u1
+wire not_high u1
+wire half_low u1
+wire half_high u1
+wire low_one u1
+wire low_two u1
+wire low_three u1
+wire select0 u1
+wire select1 u1
+wire select2 u1
+wire select3 u1
+wire select1_base u1
+wire select3_base u1
+wire select_hi u2
+wire select_lo u2
+wire wide_op u1
+wire odd_wide u1
+wire high_word u1
+wire bit_one u1
+comb zero const 0
+comb one const 1
+comb two const 2
+comb three const 3
+comb bit_one const 1
+comb byte_zero eq i_bytecnt zero
+comb byte_high slice i_bytecnt 1 1
+comb byte_low_half xor byte_high bit_one
+comb valid_half and i_half byte_low_half
+comb valid_word or i_word i_mdu_op
+comb valid_base or byte_zero valid_half
+comb valid or valid_word valid_base
+comb sign_next mux valid i_bufreg2_q signbit
+sync signbit i_clk reset_unused sign_next
+comb sign_fill and i_signed signbit
+comb o_rd mux valid i_bufreg2_q sign_fill
+comb low slice i_lsb 0 0
+comb high slice i_lsb 1 1
+comb not_high xor high bit_one
+comb half_low and i_half not_high
+comb half_high and i_half high
+comb low_one eq i_lsb one
+comb low_two eq i_lsb two
+comb low_three eq i_lsb three
+comb select0 eq i_lsb zero
+comb select1_base or i_word low_one
+comb select1 or select1_base half_low
+comb select2 or i_word low_two
+comb select3_base or i_word low_three
+comb select3 or select3_base half_high
+comb select_hi concat select3 select2
+comb select_lo concat select1 select0
+comb o_wb_sel concat select_hi select_lo
+comb wide_op or i_word i_half
+comb odd_wide and low wide_op
+comb high_word and high i_word
+comb o_misalign or odd_wide high_word
+end
