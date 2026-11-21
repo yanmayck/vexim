@@ -8,14 +8,19 @@ module serv_soc (
     wire [3:0] dsel;
     wire icyc, dcyc, dwe;
     reg iack, dack, dma_ack;
-    reg [31:0] idata, sram_read, mmio_read;
+    reg [31:0] idata, mmio_read;
     reg read_sram;
     wire [31:0] rdata = read_sram ? sram_read : mmio_read;
     reg [31:0] rom [0:63];
+`ifdef UP5K_SPRAM
+    wire [31:0] sram_read;
+`else
+    reg [31:0] sram_read;
     reg [7:0] sram0 [0:4095];
     reg [7:0] sram1 [0:4095];
     reg [7:0] sram2 [0:4095];
     reg [7:0] sram3 [0:4095];
+`endif
     reg [31:0] timer_count, timer_compare;
     reg timer_enable;
 
@@ -66,6 +71,19 @@ module serv_soc (
     wire [11:0] word_index = addr[13:2];
     wire io_write = request && !take_dma && wr && mask == 4'hf;
 
+`ifdef UP5K_SPRAM
+    // Each byte enable drives two nibble enables in the hard SRAM.
+    for (genvar half=0; half<2; half=half+1) begin: spram
+        SB_SPRAM256KA bank (
+            .ADDRESS({2'b00,word_index}), .DATAIN(data[half*16+:16]),
+            .MASKWREN({{2{mask[half*2+1]}},{2{mask[half*2]}}}),
+            .WREN(wr), .CHIPSELECT(request && in_sram), .CLOCK(clk),
+            .STANDBY(1'b0), .SLEEP(1'b0), .POWEROFF(1'b1),
+            .DATAOUT(sram_read[half*16+:16])
+        );
+    end
+`endif
+
     reg [9:0] uart_frame;
     reg [3:0] uart_left;
     reg [3:0] uart_div;
@@ -108,6 +126,7 @@ module serv_soc (
                 last_dma <= take_dma;
                 read_sram <= in_sram;
                 mmio_read <= read_value;
+`ifndef UP5K_SPRAM
                 sram_read <= {sram3[word_index], sram2[word_index],
                               sram1[word_index], sram0[word_index]};
                 if (wr && in_sram) begin
@@ -116,6 +135,7 @@ module serv_soc (
                     if (mask[2]) sram2[word_index] <= data[23:16];
                     if (mask[3]) sram3[word_index] <= data[31:24];
                 end
+`endif
             end
         end
     end

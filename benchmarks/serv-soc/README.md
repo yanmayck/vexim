@@ -64,3 +64,38 @@ docker run --rm --network none --mount "type=bind,source=$((Get-Location).Path)/
 The runner writes the firmware image, boot logs, synthesized netlists and
 five nextpnr reports per CPU variant. It uses the ECP5-85F/CABGA381,
 speed grade 6, and a 75 MHz constraint with automatic pin placement.
+
+## iCE40 UP5K baseline
+
+This baseline uses the pinned official SERV CPU and the existing firmware.
+The only target-specific RTL change is the data memory backend. Two
+16-bit SPRAM primitives are addressed together to retain the 32-bit,
+16 KiB memory map. Each software byte enable controls the corresponding
+two nibble enables. Firmware passes in 17,199 cycles against the Yosys
+primitive simulation models, matching the existing generic-memory run.
+
+| Metric | UP5K-SG48 |
+|---|---:|
+| Mapped LUT4s | 1,236 |
+| Packed logic cells | 1,535 / 5,280 |
+| Logic cells free | 3,745 (70.9%) |
+| SPRAM blocks | 2 / 4 |
+| EBR blocks | 1 / 30 |
+| Global buffers | 8 / 8 |
+| Fmax across seeds 1–5 (MHz) | 24.69, 24.50, 24.63, 24.77, 24.30 |
+| Median routed Fmax | 24.63 MHz |
+| Seeds meeting 50 MHz | 0 / 5 |
+
+Leaving 75% of packed logic cells free allows at most 1,320 occupied
+cells. The baseline is 215 cells above that budget. Pin placement is
+automatic and the reported Fmax is a tool estimate.
+
+Use the same dependencies and pinned checkout as above, then run:
+
+~~~powershell
+New-Item -ItemType Directory -Force build/serv-soc-up5k | Out-Null
+docker run --rm --network none --mount "type=bind,source=$((Get-Location).Path)/build/serv-upstream/rtl,target=/rtl,readonly" --mount "type=bind,source=$((Get-Location).Path)/benchmarks,target=/benchmarks,readonly" --mount "type=bind,source=$((Get-Location).Path)/build/serv-soc-up5k,target=/output" -e PYTHONDONTWRITEBYTECODE=1 vexim-ecp5-tools python3 /benchmarks/serv-soc/up5k.py
+~~~
+
+The runner writes `up5k-results.json`, the synthesized netlist, and all
+five routing reports in `build/serv-soc-up5k`.
