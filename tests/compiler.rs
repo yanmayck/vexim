@@ -3,6 +3,20 @@ use veximc::parse;
 const RAM: &str = include_str!("../examples/ram.vxm");
 
 #[test]
+fn emission_removes_dead_chains_and_keeps_registered_state() {
+    let source = "module demo\ninput clk u1\ninput rst u1\ninput a u8\noutput q u8\nwire dead u8\nwire chain u8\ncomb dead const 7\ncomb chain copy dead\nsync q clk rst a\nend";
+    let sv = parse(source).unwrap().system_verilog();
+    assert!(!sv.contains("\\dead "));
+    assert!(!sv.contains("\\chain "));
+    assert!(sv.contains("always_ff"));
+    assert!(sv.contains("\\a "));
+    let ram = parse(RAM).unwrap().system_verilog();
+    assert!(ram.contains("\\din "));
+    assert!(ram.contains("\\wr_addr "));
+    assert!(ram.contains("always_ff"));
+}
+
+#[test]
 fn rejects_invalid_memory_ports_and_cycles() {
     for (from, to, expected) in [
         (

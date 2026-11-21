@@ -62,6 +62,11 @@ end
 
 ## Validation
 
+After validation, the emitter eliminates internal signal chains that cannot
+affect outputs. It preserves input/output ports, live register dependencies,
+and all memory write ports and their dependencies. Partial unused bits may
+remain in a live signal and can produce lint warnings.
+
 Every output and wire must have exactly one driver. Inputs are driven by the caller. The compiler rejects combinational cycles, including cycles through multiplexer selectors. Feedback through a register is allowed. Compiler diagnostics identify the source line, and generated SystemVerilog includes the source line alongside each driver.
 
 See the [UART transmitter](examples/uart_tx.vxm) for a complete design that combines counters, bit slicing, and conditional state updates.

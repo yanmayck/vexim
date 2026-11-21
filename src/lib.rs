@@ -420,6 +420,38 @@ pub fn parse_with_parameters(
 }
 
 impl Module {
+    fn live_signals(&self) -> Vec<bool> {
+        let mut live = vec![false; self.signals.len()];
+        let mut pending: Vec<_> = self
+            .signals
+            .iter()
+            .enumerate()
+            .filter_map(|(index, signal)| (signal.direction == Direction::Output).then_some(index))
+            .collect();
+        // Keep memory writes and their inputs, including stores that affect later reads.
+        for memory in &self.memories {
+            if let Some(write) = &memory.write {
+                pending.extend([write.clock, write.enable, write.address, write.data]);
+            }
+        }
+        while let Some(index) = pending.pop() {
+            if live[index] {
+                continue;
+            }
+            live[index] = true;
+            if let Some(driver) = &self.drivers[index] {
+                match driver.operation {
+                    Operation::Register {
+                        clock, reset, data, ..
+                    } => {
+                        pending.extend([clock, reset, data]);
+                    }
+                    _ => pending.extend(driver.operation.combinational_inputs()),
+                }
+            }
+        }
+        live
+    }
     fn check_cycles(&self) -> Result<(), Diagnostic> {
         let mut dependents = vec![Vec::new(); self.signals.len()];
         let mut pending = vec![0; self.signals.len()];
@@ -455,6 +487,7 @@ impl Module {
 
     /// Emit synthesizable SystemVerilog with a source line comment for each driver.
     pub fn system_verilog(&self) -> String {
+        let live = self.live_signals();
         fn escaped(name: &str) -> String {
             format!("\\{name} ")
         }
@@ -487,10 +520,10 @@ impl Module {
             escaped(&self.name),
             ports.join(",\n")
         );
-        for s in self
-            .signals
-            .iter()
-            .filter(|s| s.direction == Direction::Wire)
+        for s in
+            self.signals.iter().enumerate().filter_map(|(index, s)| {
+                (s.direction == Direction::Wire && live[index]).then_some(s)
+            })
         {
             writeln!(out, "  logic {}{};", range(s.width), escaped(&s.name)).unwrap();
         }
@@ -515,6 +548,9 @@ impl Module {
                 write.line, signal(write.clock), signal(write.data)).unwrap();
         }
         for (i, driver) in self.drivers.iter().enumerate() {
+            if !live[i] {
+                continue;
+            }
             let Some(driver) = driver else {
                 continue;
             };
