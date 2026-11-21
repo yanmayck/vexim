@@ -1,0 +1,108 @@
+"""Import the pinned SERV profile's flattened RTLIL as synthesizable Vexim."""
+import json
+import re
+import sys
+from pathlib import Path
+
+
+def translate(module):
+    lines = ["# Generated from the pinned ISC-licensed SERV RTL.", "module serv_rf_vex"]
+    sources = {"0": "zero", "1": "one", "x": "zero", "z": "zero"}
+    initialized = [name for name, net in module["netnames"].items()
+                   if "init" in net["attributes"]]
+    if initialized:
+        raise ValueError(f"unsupported initial values: {initialized}")
+    for name, port in module["ports"].items():
+        lines.append(f'{port["direction"]} {name} u{len(port["bits"])}')
+        if port["direction"] == "input":
+            for i, bit in enumerate(port["bits"]):
+                sources[bit] = name if len(port["bits"]) == 1 else f"n{bit}"
+                if len(port["bits"]) > 1:
+                    lines += [f"wire n{bit} u1", f"comb n{bit} slice {name} {i} {i}"]
+    lines += ["wire zero u1", "comb zero const 0", "wire one u1", "comb one const 1"]
+
+    def bit(value):
+        return sources.get(value, f"n{value}")
+
+    def comb(name, width, expression):
+        lines.extend([f"wire {name} u{width}", f"comb {name} {expression}"])
+        return name
+
+    def pack(bits, name):
+        value = bit(bits[-1])
+        for width, item in enumerate(reversed(bits[:-1]), 2):
+            value = comb(f"{name}_{width}", width, f"concat {value} {bit(item)}")
+        return value
+
+    for i, cell in enumerate(module["cells"].values()):
+        kind, ports = cell["type"], cell["connections"]
+        args = {key: bit(value[0]) for key, value in ports.items()}
+        if kind == "$mem_v2":
+            p = {key: int(value, 2) for key, value in cell["parameters"].items()
+                 if set(value) <= {"0", "1"}}
+            expected = {"RD_PORTS": 1, "WR_PORTS": 1, "RD_CLK_ENABLE": 0,
+                        "WR_CLK_ENABLE": 1, "WR_CLK_POLARITY": 1, "OFFSET": 0,
+                        "RD_TRANSPARENCY_MASK": 0, "RD_COLLISION_X_MASK": 0}
+            if (any(p.get(key) != value for key, value in expected.items()) or
+                    set(cell["parameters"]["INIT"]) != {"x"} or
+                    ports["RD_EN"] != ["1"] or ports["RD_ARST"] != ["0"] or
+                    ports["RD_SRST"] != ["0"] or len(set(ports["WR_EN"])) != 1):
+                raise ValueError("unsupported SERV memory profile")
+            name = f"memory{i}"
+            width, depth = p["WIDTH"], p["SIZE"]
+            lines.append(f"mem {name} u{width} {depth}")
+            rd_addr = pack(ports["RD_ADDR"], f"{name}_rd")
+            wr_addr = pack(ports["WR_ADDR"], f"{name}_wr")
+            data = pack(ports["WR_DATA"], f"{name}_data")
+            read = comb(f"{name}_data_out", width, f"read {name} {rd_addr}")
+            for index, output in enumerate(ports["RD_DATA"]):
+                comb(bit(output), 1, f"slice {read} {index} {index}")
+            lines.append(f"write {name} {args['WR_CLK']} {args['WR_EN']} {wr_addr} {data}")
+        elif kind in {"$_AND_", "$_OR_", "$_XOR_", "$_NOT_", "$_MUX_"}:
+            if kind == "$_MUX_":
+                expression = f"mux {args['S']} {args['B']} {args['A']}"
+            elif kind == "$_NOT_":
+                expression = f"xor {args['A']} one"
+            else:
+                expression = f"{kind[2:-1].lower()} {args['A']} {args['B']}"
+            comb(args["Y"], 1, expression)
+        else:
+            flop = re.fullmatch(r"\$_(DFF|DFFE|SDFF|SDFFE|SDFFCE)_(P)([PN]?[01]?)([PN]?)_", kind)
+            if not flop:
+                raise ValueError(f"unsupported cell {kind}")
+            form, _, reset_mode, enable_mode = flop.groups()
+            data, q = args["D"], args["Q"]
+            has_reset = form.startswith("S")
+            if form == "DFFE":
+                enable_mode = reset_mode
+            if "E" in args:
+                en = args["E"]
+                if enable_mode == "N":
+                    en = comb(f"ce{i}", 1, f"xor {en} one")
+            if has_reset:
+                reset = args["R"]
+                if reset_mode[0] == "N":
+                    reset = comb(f"rst{i}", 1, f"xor {reset} one")
+                reset_value = "one" if reset_mode[1] == "1" else "zero"
+                if form == "SDFFCE":
+                    data = comb(f"rd{i}", 1, f"mux {reset} {reset_value} {data}")
+            if "E" in args:
+                data = comb(f"ed{i}", 1, f"mux {en} {data} {q}")
+            if has_reset and form != "SDFFCE":
+                data = comb(f"sd{i}", 1, f"mux {reset} {reset_value} {data}")
+            lines.append(f"wire {q} u1")
+            lines.append(f"sync {q} {args['C']} no_reset {data}")
+    for name, port in module["ports"].items():
+        if port["direction"] == "output":
+            value = pack(port["bits"], f"out_{name}")
+            lines.append(f"comb {name} copy {value}")
+    # The original MINI reset is expressed in the data muxes. A wrapper ties this
+    # additional compiler-required reset port low to preserve the external interface.
+    lines.insert(2, "input no_reset u1")
+    return "\n".join(lines + ["end", ""])
+
+
+if __name__ == "__main__":
+    source, target = map(Path, sys.argv[1:])
+    module = json.loads(source.read_text())["modules"]["serv_rf_top"]
+    target.write_text(translate(module))

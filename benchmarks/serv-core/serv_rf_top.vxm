@@ -1,0 +1,2539 @@
+# Generated from the pinned ISC-licensed SERV RTL.
+module serv_rf_vex
+input no_reset u1
+input clk u1
+input i_rst u1
+input i_timer_irq u1
+output o_ibus_adr u32
+output o_ibus_cyc u1
+input i_ibus_rdt u32
+wire n38 u1
+comb n38 slice i_ibus_rdt 0 0
+wire n39 u1
+comb n39 slice i_ibus_rdt 1 1
+wire n40 u1
+comb n40 slice i_ibus_rdt 2 2
+wire n41 u1
+comb n41 slice i_ibus_rdt 3 3
+wire n42 u1
+comb n42 slice i_ibus_rdt 4 4
+wire n43 u1
+comb n43 slice i_ibus_rdt 5 5
+wire n44 u1
+comb n44 slice i_ibus_rdt 6 6
+wire n45 u1
+comb n45 slice i_ibus_rdt 7 7
+wire n46 u1
+comb n46 slice i_ibus_rdt 8 8
+wire n47 u1
+comb n47 slice i_ibus_rdt 9 9
+wire n48 u1
+comb n48 slice i_ibus_rdt 10 10
+wire n49 u1
+comb n49 slice i_ibus_rdt 11 11
+wire n50 u1
+comb n50 slice i_ibus_rdt 12 12
+wire n51 u1
+comb n51 slice i_ibus_rdt 13 13
+wire n52 u1
+comb n52 slice i_ibus_rdt 14 14
+wire n53 u1
+comb n53 slice i_ibus_rdt 15 15
+wire n54 u1
+comb n54 slice i_ibus_rdt 16 16
+wire n55 u1
+comb n55 slice i_ibus_rdt 17 17
+wire n56 u1
+comb n56 slice i_ibus_rdt 18 18
+wire n57 u1
+comb n57 slice i_ibus_rdt 19 19
+wire n58 u1
+comb n58 slice i_ibus_rdt 20 20
+wire n59 u1
+comb n59 slice i_ibus_rdt 21 21
+wire n60 u1
+comb n60 slice i_ibus_rdt 22 22
+wire n61 u1
+comb n61 slice i_ibus_rdt 23 23
+wire n62 u1
+comb n62 slice i_ibus_rdt 24 24
+wire n63 u1
+comb n63 slice i_ibus_rdt 25 25
+wire n64 u1
+comb n64 slice i_ibus_rdt 26 26
+wire n65 u1
+comb n65 slice i_ibus_rdt 27 27
+wire n66 u1
+comb n66 slice i_ibus_rdt 28 28
+wire n67 u1
+comb n67 slice i_ibus_rdt 29 29
+wire n68 u1
+comb n68 slice i_ibus_rdt 30 30
+wire n69 u1
+comb n69 slice i_ibus_rdt 31 31
+input i_ibus_ack u1
+output o_dbus_adr u32
+output o_dbus_dat u32
+output o_dbus_sel u4
+output o_dbus_we u1
+output o_dbus_cyc u1
+input i_dbus_rdt u32
+wire n139 u1
+comb n139 slice i_dbus_rdt 0 0
+wire n140 u1
+comb n140 slice i_dbus_rdt 1 1
+wire n141 u1
+comb n141 slice i_dbus_rdt 2 2
+wire n142 u1
+comb n142 slice i_dbus_rdt 3 3
+wire n143 u1
+comb n143 slice i_dbus_rdt 4 4
+wire n144 u1
+comb n144 slice i_dbus_rdt 5 5
+wire n145 u1
+comb n145 slice i_dbus_rdt 6 6
+wire n146 u1
+comb n146 slice i_dbus_rdt 7 7
+wire n147 u1
+comb n147 slice i_dbus_rdt 8 8
+wire n148 u1
+comb n148 slice i_dbus_rdt 9 9
+wire n149 u1
+comb n149 slice i_dbus_rdt 10 10
+wire n150 u1
+comb n150 slice i_dbus_rdt 11 11
+wire n151 u1
+comb n151 slice i_dbus_rdt 12 12
+wire n152 u1
+comb n152 slice i_dbus_rdt 13 13
+wire n153 u1
+comb n153 slice i_dbus_rdt 14 14
+wire n154 u1
+comb n154 slice i_dbus_rdt 15 15
+wire n155 u1
+comb n155 slice i_dbus_rdt 16 16
+wire n156 u1
+comb n156 slice i_dbus_rdt 17 17
+wire n157 u1
+comb n157 slice i_dbus_rdt 18 18
+wire n158 u1
+comb n158 slice i_dbus_rdt 19 19
+wire n159 u1
+comb n159 slice i_dbus_rdt 20 20
+wire n160 u1
+comb n160 slice i_dbus_rdt 21 21
+wire n161 u1
+comb n161 slice i_dbus_rdt 22 22
+wire n162 u1
+comb n162 slice i_dbus_rdt 23 23
+wire n163 u1
+comb n163 slice i_dbus_rdt 24 24
+wire n164 u1
+comb n164 slice i_dbus_rdt 25 25
+wire n165 u1
+comb n165 slice i_dbus_rdt 26 26
+wire n166 u1
+comb n166 slice i_dbus_rdt 27 27
+wire n167 u1
+comb n167 slice i_dbus_rdt 28 28
+wire n168 u1
+comb n168 slice i_dbus_rdt 29 29
+wire n169 u1
+comb n169 slice i_dbus_rdt 30 30
+wire n170 u1
+comb n170 slice i_dbus_rdt 31 31
+input i_dbus_ack u1
+output o_ext_rs1 u32
+output o_ext_rs2 u32
+output o_ext_funct3 u3
+input i_ext_rd u32
+wire n177 u1
+comb n177 slice i_ext_rd 0 0
+wire n178 u1
+comb n178 slice i_ext_rd 1 1
+wire n179 u1
+comb n179 slice i_ext_rd 2 2
+wire n180 u1
+comb n180 slice i_ext_rd 3 3
+wire n181 u1
+comb n181 slice i_ext_rd 4 4
+wire n182 u1
+comb n182 slice i_ext_rd 5 5
+wire n183 u1
+comb n183 slice i_ext_rd 6 6
+wire n184 u1
+comb n184 slice i_ext_rd 7 7
+wire n185 u1
+comb n185 slice i_ext_rd 8 8
+wire n186 u1
+comb n186 slice i_ext_rd 9 9
+wire n187 u1
+comb n187 slice i_ext_rd 10 10
+wire n188 u1
+comb n188 slice i_ext_rd 11 11
+wire n189 u1
+comb n189 slice i_ext_rd 12 12
+wire n190 u1
+comb n190 slice i_ext_rd 13 13
+wire n191 u1
+comb n191 slice i_ext_rd 14 14
+wire n192 u1
+comb n192 slice i_ext_rd 15 15
+wire n193 u1
+comb n193 slice i_ext_rd 16 16
+wire n194 u1
+comb n194 slice i_ext_rd 17 17
+wire n195 u1
+comb n195 slice i_ext_rd 18 18
+wire n196 u1
+comb n196 slice i_ext_rd 19 19
+wire n197 u1
+comb n197 slice i_ext_rd 20 20
+wire n198 u1
+comb n198 slice i_ext_rd 21 21
+wire n199 u1
+comb n199 slice i_ext_rd 22 22
+wire n200 u1
+comb n200 slice i_ext_rd 23 23
+wire n201 u1
+comb n201 slice i_ext_rd 24 24
+wire n202 u1
+comb n202 slice i_ext_rd 25 25
+wire n203 u1
+comb n203 slice i_ext_rd 26 26
+wire n204 u1
+comb n204 slice i_ext_rd 27 27
+wire n205 u1
+comb n205 slice i_ext_rd 28 28
+wire n206 u1
+comb n206 slice i_ext_rd 29 29
+wire n207 u1
+comb n207 slice i_ext_rd 30 30
+wire n208 u1
+comb n208 slice i_ext_rd 31 31
+input i_ext_ready u1
+output o_mdu_valid u1
+wire zero u1
+comb zero const 0
+wire one u1
+comb one const 1
+wire sd0 u1
+comb sd0 mux i_rst zero n210
+wire n211 u1
+sync n211 clk no_reset sd0
+wire n213 u1
+sync n213 clk no_reset n212
+wire n212 u1
+sync n212 clk no_reset n214
+wire n214 u1
+sync n214 clk no_reset n215
+wire n217 u1
+sync n217 clk no_reset n216
+wire n216 u1
+sync n216 clk no_reset n218
+wire rst6 u1
+comb rst6 xor n221 one
+wire sd6 u1
+comb sd6 mux rst6 zero n219
+wire n220 u1
+sync n220 clk no_reset sd6
+wire ed7 u1
+comb ed7 mux n222 n210 n223
+wire sd7 u1
+comb sd7 mux i_rst zero ed7
+wire n223 u1
+sync n223 clk no_reset sd7
+wire sd8 u1
+comb sd8 mux n225 zero n224
+wire n221 u1
+sync n221 clk no_reset sd8
+wire sd9 u1
+comb sd9 mux n225 zero n226
+wire n227 u1
+sync n227 clk no_reset sd9
+wire sd10 u1
+comb sd10 mux n225 zero n228
+wire n229 u1
+sync n229 clk no_reset sd10
+wire sd11 u1
+comb sd11 mux n225 zero n230
+wire n231 u1
+sync n231 clk no_reset sd11
+wire n232 u1
+sync n232 clk no_reset n221
+wire sd13 u1
+comb sd13 mux i_rst zero n211
+wire n233 u1
+sync n233 clk no_reset sd13
+wire ed14 u1
+comb ed14 mux n232 n219 n234
+wire n234 u1
+sync n234 clk no_reset ed14
+wire ed15 u1
+comb ed15 mux n221 n235 n236
+wire n236 u1
+sync n236 clk no_reset ed15
+wire ed16 u1
+comb ed16 mux n238 n237 n239
+wire n239 u1
+sync n239 clk no_reset ed16
+wire n241 u1
+sync n241 clk no_reset n240
+wire n243 u1
+sync n243 clk no_reset n242
+wire n245 u1
+sync n245 clk no_reset n244
+wire ed20 u1
+comb ed20 mux n247 n246 n248
+wire n248 u1
+sync n248 clk no_reset ed20
+wire ed21 u1
+comb ed21 mux n247 n249 n250
+wire n250 u1
+sync n250 clk no_reset ed21
+wire ed22 u1
+comb ed22 mux n247 n251 n252
+wire n252 u1
+sync n252 clk no_reset ed22
+wire ed23 u1
+comb ed23 mux n253 n173 n172
+wire n172 u1
+sync n172 clk no_reset ed23
+wire ed24 u1
+comb ed24 mux n253 n254 n173
+wire n173 u1
+sync n173 clk no_reset ed24
+wire ed25 u1
+comb ed25 mux i_ibus_ack n255 n256
+wire sd25 u1
+comb sd25 mux i_rst zero ed25
+wire n256 u1
+sync n256 clk no_reset sd25
+wire ed26 u1
+comb ed26 mux n257 n239 n258
+wire n258 u1
+sync n258 clk no_reset ed26
+wire ed27 u1
+comb ed27 mux n260 n259 n261
+wire n261 u1
+sync n261 clk no_reset ed27
+wire ed28 u1
+comb ed28 mux n263 n262 n264
+wire sd28 u1
+comb sd28 mux i_rst zero ed28
+wire n264 u1
+sync n264 clk no_reset sd28
+wire ed29 u1
+comb ed29 mux n247 n265 n266
+wire n266 u1
+sync n266 clk no_reset ed29
+wire ed30 u1
+comb ed30 mux i_ibus_ack n267 n268
+wire n268 u1
+sync n268 clk no_reset ed30
+wire ed31 u1
+comb ed31 mux n270 n269 n271
+wire n271 u1
+sync n271 clk no_reset ed31
+wire ed32 u1
+comb ed32 mux n273 n272 n274
+wire n274 u1
+sync n274 clk no_reset ed32
+wire n276 u1
+sync n276 clk no_reset n275
+wire ed34 u1
+comb ed34 mux n278 n277 n125
+wire n125 u1
+sync n125 clk no_reset ed34
+wire ed35 u1
+comb ed35 mux n278 n279 n126
+wire n126 u1
+sync n126 clk no_reset ed35
+wire ed36 u1
+comb ed36 mux n278 n280 n127
+wire n127 u1
+sync n127 clk no_reset ed36
+wire ed37 u1
+comb ed37 mux n278 n281 n128
+wire n128 u1
+sync n128 clk no_reset ed37
+wire ed38 u1
+comb ed38 mux n278 n282 n129
+wire n129 u1
+sync n129 clk no_reset ed38
+wire ed39 u1
+comb ed39 mux n278 n283 n130
+wire n130 u1
+sync n130 clk no_reset ed39
+wire ed40 u1
+comb ed40 mux n278 n284 n131
+wire n131 u1
+sync n131 clk no_reset ed40
+wire ed41 u1
+comb ed41 mux n278 n285 n132
+wire n132 u1
+sync n132 clk no_reset ed41
+wire rd42 u1
+comb rd42 mux i_rst zero n6
+wire ed42 u1
+comb ed42 mux n286 rd42 n5
+wire n5 u1
+sync n5 clk no_reset ed42
+wire rd43 u1
+comb rd43 mux i_rst zero n7
+wire ed43 u1
+comb ed43 mux n286 rd43 n6
+wire n6 u1
+sync n6 clk no_reset ed43
+wire rd44 u1
+comb rd44 mux i_rst zero n8
+wire ed44 u1
+comb ed44 mux n286 rd44 n7
+wire n7 u1
+sync n7 clk no_reset ed44
+wire rd45 u1
+comb rd45 mux i_rst zero n9
+wire ed45 u1
+comb ed45 mux n286 rd45 n8
+wire n8 u1
+sync n8 clk no_reset ed45
+wire rd46 u1
+comb rd46 mux i_rst zero n10
+wire ed46 u1
+comb ed46 mux n286 rd46 n9
+wire n9 u1
+sync n9 clk no_reset ed46
+wire rd47 u1
+comb rd47 mux i_rst zero n11
+wire ed47 u1
+comb ed47 mux n286 rd47 n10
+wire n10 u1
+sync n10 clk no_reset ed47
+wire rd48 u1
+comb rd48 mux i_rst zero n12
+wire ed48 u1
+comb ed48 mux n286 rd48 n11
+wire n11 u1
+sync n11 clk no_reset ed48
+wire rd49 u1
+comb rd49 mux i_rst zero n13
+wire ed49 u1
+comb ed49 mux n286 rd49 n12
+wire n12 u1
+sync n12 clk no_reset ed49
+wire rd50 u1
+comb rd50 mux i_rst zero n14
+wire ed50 u1
+comb ed50 mux n286 rd50 n13
+wire n13 u1
+sync n13 clk no_reset ed50
+wire rd51 u1
+comb rd51 mux i_rst zero n15
+wire ed51 u1
+comb ed51 mux n286 rd51 n14
+wire n14 u1
+sync n14 clk no_reset ed51
+wire rd52 u1
+comb rd52 mux i_rst zero n16
+wire ed52 u1
+comb ed52 mux n286 rd52 n15
+wire n15 u1
+sync n15 clk no_reset ed52
+wire rd53 u1
+comb rd53 mux i_rst zero n17
+wire ed53 u1
+comb ed53 mux n286 rd53 n16
+wire n16 u1
+sync n16 clk no_reset ed53
+wire rd54 u1
+comb rd54 mux i_rst zero n18
+wire ed54 u1
+comb ed54 mux n286 rd54 n17
+wire n17 u1
+sync n17 clk no_reset ed54
+wire rd55 u1
+comb rd55 mux i_rst zero n19
+wire ed55 u1
+comb ed55 mux n286 rd55 n18
+wire n18 u1
+sync n18 clk no_reset ed55
+wire rd56 u1
+comb rd56 mux i_rst zero n20
+wire ed56 u1
+comb ed56 mux n286 rd56 n19
+wire n19 u1
+sync n19 clk no_reset ed56
+wire rd57 u1
+comb rd57 mux i_rst zero n21
+wire ed57 u1
+comb ed57 mux n286 rd57 n20
+wire n20 u1
+sync n20 clk no_reset ed57
+wire rd58 u1
+comb rd58 mux i_rst zero n22
+wire ed58 u1
+comb ed58 mux n286 rd58 n21
+wire n21 u1
+sync n21 clk no_reset ed58
+wire rd59 u1
+comb rd59 mux i_rst zero n23
+wire ed59 u1
+comb ed59 mux n286 rd59 n22
+wire n22 u1
+sync n22 clk no_reset ed59
+wire rd60 u1
+comb rd60 mux i_rst zero n24
+wire ed60 u1
+comb ed60 mux n286 rd60 n23
+wire n23 u1
+sync n23 clk no_reset ed60
+wire rd61 u1
+comb rd61 mux i_rst zero n25
+wire ed61 u1
+comb ed61 mux n286 rd61 n24
+wire n24 u1
+sync n24 clk no_reset ed61
+wire rd62 u1
+comb rd62 mux i_rst zero n26
+wire ed62 u1
+comb ed62 mux n286 rd62 n25
+wire n25 u1
+sync n25 clk no_reset ed62
+wire rd63 u1
+comb rd63 mux i_rst zero n27
+wire ed63 u1
+comb ed63 mux n286 rd63 n26
+wire n26 u1
+sync n26 clk no_reset ed63
+wire rd64 u1
+comb rd64 mux i_rst zero n28
+wire ed64 u1
+comb ed64 mux n286 rd64 n27
+wire n27 u1
+sync n27 clk no_reset ed64
+wire rd65 u1
+comb rd65 mux i_rst zero n29
+wire ed65 u1
+comb ed65 mux n286 rd65 n28
+wire n28 u1
+sync n28 clk no_reset ed65
+wire rd66 u1
+comb rd66 mux i_rst zero n30
+wire ed66 u1
+comb ed66 mux n286 rd66 n29
+wire n29 u1
+sync n29 clk no_reset ed66
+wire rd67 u1
+comb rd67 mux i_rst zero n31
+wire ed67 u1
+comb ed67 mux n286 rd67 n30
+wire n30 u1
+sync n30 clk no_reset ed67
+wire rd68 u1
+comb rd68 mux i_rst zero n32
+wire ed68 u1
+comb ed68 mux n286 rd68 n31
+wire n31 u1
+sync n31 clk no_reset ed68
+wire rd69 u1
+comb rd69 mux i_rst zero n33
+wire ed69 u1
+comb ed69 mux n286 rd69 n32
+wire n32 u1
+sync n32 clk no_reset ed69
+wire rd70 u1
+comb rd70 mux i_rst zero n34
+wire ed70 u1
+comb ed70 mux n286 rd70 n33
+wire n33 u1
+sync n33 clk no_reset ed70
+wire rd71 u1
+comb rd71 mux i_rst zero n35
+wire ed71 u1
+comb ed71 mux n286 rd71 n34
+wire n34 u1
+sync n34 clk no_reset ed71
+wire rd72 u1
+comb rd72 mux i_rst zero n36
+wire ed72 u1
+comb ed72 mux n286 rd72 n35
+wire n35 u1
+sync n35 clk no_reset ed72
+wire rd73 u1
+comb rd73 mux i_rst zero n287
+wire ed73 u1
+comb ed73 mux n286 rd73 n36
+wire n36 u1
+sync n36 clk no_reset ed73
+wire n289 u1
+sync n289 clk no_reset n288
+wire n291 u1
+sync n291 clk no_reset n290
+wire ed76 u1
+comb ed76 mux n293 n292 n101
+wire n101 u1
+sync n101 clk no_reset ed76
+wire ed77 u1
+comb ed77 mux n293 n294 n102
+wire n102 u1
+sync n102 clk no_reset ed77
+wire ed78 u1
+comb ed78 mux n293 n295 n103
+wire n103 u1
+sync n103 clk no_reset ed78
+wire ed79 u1
+comb ed79 mux n293 n296 n104
+wire n104 u1
+sync n104 clk no_reset ed79
+wire ed80 u1
+comb ed80 mux n293 n297 n105
+wire n105 u1
+sync n105 clk no_reset ed80
+wire ed81 u1
+comb ed81 mux n293 n298 n106
+wire n106 u1
+sync n106 clk no_reset ed81
+wire ed82 u1
+comb ed82 mux n293 n299 n107
+wire n107 u1
+sync n107 clk no_reset ed82
+wire ed83 u1
+comb ed83 mux n293 n300 n108
+wire n108 u1
+sync n108 clk no_reset ed83
+wire ed84 u1
+comb ed84 mux n293 n301 n109
+wire n109 u1
+sync n109 clk no_reset ed84
+wire ed85 u1
+comb ed85 mux n293 n302 n110
+wire n110 u1
+sync n110 clk no_reset ed85
+wire ed86 u1
+comb ed86 mux n293 n303 n111
+wire n111 u1
+sync n111 clk no_reset ed86
+wire ed87 u1
+comb ed87 mux n293 n304 n112
+wire n112 u1
+sync n112 clk no_reset ed87
+wire ed88 u1
+comb ed88 mux n293 n305 n113
+wire n113 u1
+sync n113 clk no_reset ed88
+wire ed89 u1
+comb ed89 mux n293 n306 n114
+wire n114 u1
+sync n114 clk no_reset ed89
+wire ed90 u1
+comb ed90 mux n293 n307 n115
+wire n115 u1
+sync n115 clk no_reset ed90
+wire ed91 u1
+comb ed91 mux n293 n308 n116
+wire n116 u1
+sync n116 clk no_reset ed91
+wire ed92 u1
+comb ed92 mux n293 n309 n117
+wire n117 u1
+sync n117 clk no_reset ed92
+wire ed93 u1
+comb ed93 mux n293 n310 n118
+wire n118 u1
+sync n118 clk no_reset ed93
+wire ed94 u1
+comb ed94 mux n293 n311 n119
+wire n119 u1
+sync n119 clk no_reset ed94
+wire ed95 u1
+comb ed95 mux n293 n312 n120
+wire n120 u1
+sync n120 clk no_reset ed95
+wire ed96 u1
+comb ed96 mux n293 n313 n121
+wire n121 u1
+sync n121 clk no_reset ed96
+wire ed97 u1
+comb ed97 mux n293 n314 n122
+wire n122 u1
+sync n122 clk no_reset ed97
+wire ed98 u1
+comb ed98 mux n293 n315 n123
+wire n123 u1
+sync n123 clk no_reset ed98
+wire ed99 u1
+comb ed99 mux n293 n316 n124
+wire n124 u1
+sync n124 clk no_reset ed99
+wire ed100 u1
+comb ed100 mux n317 n72 n71
+wire n71 u1
+sync n71 clk no_reset ed100
+wire ed101 u1
+comb ed101 mux n317 n73 n72
+wire n72 u1
+sync n72 clk no_reset ed101
+wire ed102 u1
+comb ed102 mux n317 n74 n73
+wire n73 u1
+sync n73 clk no_reset ed102
+wire ed103 u1
+comb ed103 mux n317 n75 n74
+wire n74 u1
+sync n74 clk no_reset ed103
+wire ed104 u1
+comb ed104 mux n317 n76 n75
+wire n75 u1
+sync n75 clk no_reset ed104
+wire ed105 u1
+comb ed105 mux n317 n77 n76
+wire n76 u1
+sync n76 clk no_reset ed105
+wire ed106 u1
+comb ed106 mux n317 n78 n77
+wire n77 u1
+sync n77 clk no_reset ed106
+wire ed107 u1
+comb ed107 mux n317 n79 n78
+wire n78 u1
+sync n78 clk no_reset ed107
+wire ed108 u1
+comb ed108 mux n317 n80 n79
+wire n79 u1
+sync n79 clk no_reset ed108
+wire ed109 u1
+comb ed109 mux n317 n81 n80
+wire n80 u1
+sync n80 clk no_reset ed109
+wire ed110 u1
+comb ed110 mux n317 n82 n81
+wire n81 u1
+sync n81 clk no_reset ed110
+wire ed111 u1
+comb ed111 mux n317 n83 n82
+wire n82 u1
+sync n82 clk no_reset ed111
+wire ed112 u1
+comb ed112 mux n317 n84 n83
+wire n83 u1
+sync n83 clk no_reset ed112
+wire ed113 u1
+comb ed113 mux n317 n85 n84
+wire n84 u1
+sync n84 clk no_reset ed113
+wire ed114 u1
+comb ed114 mux n317 n86 n85
+wire n85 u1
+sync n85 clk no_reset ed114
+wire ed115 u1
+comb ed115 mux n317 n87 n86
+wire n86 u1
+sync n86 clk no_reset ed115
+wire ed116 u1
+comb ed116 mux n317 n88 n87
+wire n87 u1
+sync n87 clk no_reset ed116
+wire ed117 u1
+comb ed117 mux n317 n89 n88
+wire n88 u1
+sync n88 clk no_reset ed117
+wire ed118 u1
+comb ed118 mux n317 n90 n89
+wire n89 u1
+sync n89 clk no_reset ed118
+wire ed119 u1
+comb ed119 mux n317 n91 n90
+wire n90 u1
+sync n90 clk no_reset ed119
+wire ed120 u1
+comb ed120 mux n317 n92 n91
+wire n91 u1
+sync n91 clk no_reset ed120
+wire ed121 u1
+comb ed121 mux n317 n93 n92
+wire n92 u1
+sync n92 clk no_reset ed121
+wire ed122 u1
+comb ed122 mux n317 n94 n93
+wire n93 u1
+sync n93 clk no_reset ed122
+wire ed123 u1
+comb ed123 mux n317 n95 n94
+wire n94 u1
+sync n94 clk no_reset ed123
+wire ed124 u1
+comb ed124 mux n317 n96 n95
+wire n95 u1
+sync n95 clk no_reset ed124
+wire ed125 u1
+comb ed125 mux n317 n97 n96
+wire n96 u1
+sync n96 clk no_reset ed125
+wire ed126 u1
+comb ed126 mux n317 n98 n97
+wire n97 u1
+sync n97 clk no_reset ed126
+wire ed127 u1
+comb ed127 mux n317 n99 n98
+wire n98 u1
+sync n98 clk no_reset ed127
+wire ed128 u1
+comb ed128 mux n317 n100 n99
+wire n99 u1
+sync n99 clk no_reset ed128
+wire ed129 u1
+comb ed129 mux n317 n318 n100
+wire n100 u1
+sync n100 clk no_reset ed129
+wire n320 u1
+sync n320 clk no_reset n319
+wire ed131 u1
+comb ed131 mux i_ibus_ack n69 n321
+wire n321 u1
+sync n321 clk no_reset ed131
+wire ed132 u1
+comb ed132 mux n323 n322 n324
+wire n324 u1
+sync n324 clk no_reset ed132
+wire ed133 u1
+comb ed133 mux n323 n325 n326
+wire n326 u1
+sync n326 clk no_reset ed133
+wire ed134 u1
+comb ed134 mux n323 n327 n328
+wire n328 u1
+sync n328 clk no_reset ed134
+wire ed135 u1
+comb ed135 mux n323 n329 n330
+wire n330 u1
+sync n330 clk no_reset ed135
+wire ed136 u1
+comb ed136 mux n323 n331 n332
+wire n332 u1
+sync n332 clk no_reset ed136
+wire ed137 u1
+comb ed137 mux n323 n333 n334
+wire n334 u1
+sync n334 clk no_reset ed137
+wire ed138 u1
+comb ed138 mux n323 n335 n336
+wire n336 u1
+sync n336 clk no_reset ed138
+wire ed139 u1
+comb ed139 mux n323 n337 n338
+wire n338 u1
+sync n338 clk no_reset ed139
+wire ed140 u1
+comb ed140 mux n323 n339 n340
+wire n340 u1
+sync n340 clk no_reset ed140
+wire ed141 u1
+comb ed141 mux n342 n341 n343
+wire n343 u1
+sync n343 clk no_reset ed141
+wire ed142 u1
+comb ed142 mux n345 n344 n346
+wire n346 u1
+sync n346 clk no_reset ed142
+wire ed143 u1
+comb ed143 mux n345 n347 n348
+wire n348 u1
+sync n348 clk no_reset ed143
+wire ed144 u1
+comb ed144 mux n345 n349 n350
+wire n350 u1
+sync n350 clk no_reset ed144
+wire ed145 u1
+comb ed145 mux n345 n351 n352
+wire n352 u1
+sync n352 clk no_reset ed145
+wire ed146 u1
+comb ed146 mux n345 n353 n354
+wire n354 u1
+sync n354 clk no_reset ed146
+wire ed147 u1
+comb ed147 mux n345 n355 n356
+wire n356 u1
+sync n356 clk no_reset ed147
+wire ed148 u1
+comb ed148 mux n358 n357 n359
+wire n359 u1
+sync n359 clk no_reset ed148
+wire ed149 u1
+comb ed149 mux n358 n360 n361
+wire n361 u1
+sync n361 clk no_reset ed149
+wire ed150 u1
+comb ed150 mux n358 n362 n363
+wire n363 u1
+sync n363 clk no_reset ed150
+wire ed151 u1
+comb ed151 mux n358 n364 n365
+wire n365 u1
+sync n365 clk no_reset ed151
+wire ed152 u1
+comb ed152 mux n358 n366 n367
+wire n367 u1
+sync n367 clk no_reset ed152
+wire ed153 u1
+comb ed153 mux n369 n368 n370
+wire n370 u1
+sync n370 clk no_reset ed153
+wire ed154 u1
+comb ed154 mux n369 n371 n372
+wire n372 u1
+sync n372 clk no_reset ed154
+wire ed155 u1
+comb ed155 mux n369 n373 n374
+wire n374 u1
+sync n374 clk no_reset ed155
+wire ed156 u1
+comb ed156 mux n369 n375 n376
+wire n376 u1
+sync n376 clk no_reset ed156
+wire ed157 u1
+comb ed157 mux n369 n377 n378
+wire n378 u1
+sync n378 clk no_reset ed157
+wire ed158 u1
+comb ed158 mux i_ibus_ack n68 n379
+wire n379 u1
+sync n379 clk no_reset ed158
+wire ed159 u1
+comb ed159 mux i_ibus_ack n64 n380
+wire n380 u1
+sync n380 clk no_reset ed159
+wire ed160 u1
+comb ed160 mux i_ibus_ack n60 n381
+wire n381 u1
+sync n381 clk no_reset ed160
+wire ed161 u1
+comb ed161 mux i_ibus_ack n59 n382
+wire n382 u1
+sync n382 clk no_reset ed161
+wire ed162 u1
+comb ed162 mux i_ibus_ack n58 n383
+wire n383 u1
+sync n383 clk no_reset ed162
+wire ed163 u1
+comb ed163 mux i_ibus_ack n50 n174
+wire n174 u1
+sync n174 clk no_reset ed163
+wire ed164 u1
+comb ed164 mux i_ibus_ack n51 n175
+wire n175 u1
+sync n175 clk no_reset ed164
+wire ed165 u1
+comb ed165 mux i_ibus_ack n52 n176
+wire n176 u1
+sync n176 clk no_reset ed165
+wire ed166 u1
+comb ed166 mux i_ibus_ack n40 n384
+wire n384 u1
+sync n384 clk no_reset ed166
+wire ed167 u1
+comb ed167 mux i_ibus_ack n41 n385
+wire n385 u1
+sync n385 clk no_reset ed167
+wire ed168 u1
+comb ed168 mux i_ibus_ack n42 n386
+wire n386 u1
+sync n386 clk no_reset ed168
+wire ed169 u1
+comb ed169 mux i_ibus_ack n43 n137
+wire n137 u1
+sync n137 clk no_reset ed169
+wire ed170 u1
+comb ed170 mux i_ibus_ack n44 n387
+wire n387 u1
+sync n387 clk no_reset ed170
+wire ed171 u1
+comb ed171 mux n388 n286 n389
+wire n389 u1
+sync n389 clk no_reset ed171
+wire sd172 u1
+comb sd172 mux i_rst zero n390
+wire n391 u1
+sync n391 clk no_reset sd172
+wire sd173 u1
+comb sd173 mux i_rst zero n392
+wire n393 u1
+sync n393 clk no_reset sd173
+wire sd174 u1
+comb sd174 mux i_rst zero n394
+wire n395 u1
+sync n395 clk no_reset sd174
+wire ed175 u1
+comb ed175 mux n388 n396 n397
+wire n397 u1
+sync n397 clk no_reset ed175
+wire ed176 u1
+comb ed176 mux n399 n398 n400
+wire sd176 u1
+comb sd176 mux i_rst zero ed176
+wire n400 u1
+sync n400 clk no_reset sd176
+wire ed177 u1
+comb ed177 mux n399 n401 n402
+wire sd177 u1
+comb sd177 mux i_rst zero ed177
+wire n402 u1
+sync n402 clk no_reset sd177
+wire ed178 u1
+comb ed178 mux n221 n403 n404
+wire n404 u1
+sync n404 clk no_reset ed178
+wire n406 u1
+sync n406 clk no_reset n405
+wire sd180 u1
+comb sd180 mux i_rst zero n407
+wire n408 u1
+sync n408 clk no_reset sd180
+wire sd181 u1
+comb sd181 mux i_rst zero n408
+wire n409 u1
+sync n409 clk no_reset sd181
+wire sd182 u1
+comb sd182 mux i_rst zero n409
+wire n410 u1
+sync n410 clk no_reset sd182
+wire sd183 u1
+comb sd183 mux i_rst zero n410
+wire n411 u1
+sync n411 clk no_reset sd183
+wire sd184 u1
+comb sd184 mux i_rst zero n412
+wire n413 u1
+sync n413 clk no_reset sd184
+wire n414 u1
+comb n414 xor n137 one
+wire n415 u1
+comb n415 xor n395 one
+wire n416 u1
+comb n416 xor n384 one
+wire n417 u1
+comb n417 xor n385 one
+wire n418 u1
+comb n418 xor n229 one
+wire n224 u1
+comb n224 xor n221 one
+wire n419 u1
+comb n419 xor n231 one
+wire n420 u1
+comb n420 xor n129 one
+wire n421 u1
+comb n421 xor n128 one
+wire n422 u1
+comb n422 xor n126 one
+wire n423 u1
+comb n423 xor n127 one
+wire n424 u1
+comb n424 xor n130 one
+wire n425 u1
+comb n425 xor n175 one
+wire n426 u1
+comb n426 xor n125 one
+wire n427 u1
+comb n427 xor n173 one
+wire n428 u1
+comb n428 xor n172 one
+wire n429 u1
+comb n429 xor n174 one
+wire n430 u1
+comb n430 xor n227 one
+wire n433 u1
+comb n433 or n431 n432
+wire n436 u1
+comb n436 or n434 n435
+wire n439 u1
+comb n439 or n437 n438
+wire n440 u1
+comb n440 or n433 n436
+wire n441 u1
+comb n441 or n440 n439
+wire n442 u1
+comb n442 or n429 n175
+wire n443 u1
+comb n443 or n174 n425
+wire n444 u1
+comb n444 or n429 n425
+wire n445 u1
+comb n445 or n428 n427
+wire n446 u1
+comb n446 or n172 n427
+wire n447 u1
+comb n447 or n428 n173
+wire n448 u1
+comb n448 or n416 n417
+wire n225 u1
+comb n225 or i_rst n449
+wire n450 u1
+comb n450 or n386 n414
+wire n452 u1
+comb n452 or n451 n450
+wire n453 u1
+comb n453 or n417 n386
+wire n454 u1
+comb n454 or n425 n176
+wire n456 u1
+comb n456 or n455 n393
+wire n457 u1
+comb n457 or n456 n395
+wire n459 u1
+comb n459 or n391 n458
+wire n460 u1
+comb n460 or n459 n395
+wire n462 u1
+comb n462 or n461 n395
+wire n461 u1
+comb n461 or n455 n458
+wire n463 u1
+comb n463 or n461 n415
+wire n464 u1
+comb n464 or n408 n409
+wire n465 u1
+comb n465 or n410 n411
+wire n273 u1
+comb n273 or n464 n465
+wire n466 u1
+comb n466 or n370 n372
+wire n467 u1
+comb n467 or n374 n376
+wire n468 u1
+comb n468 or n466 n467
+wire n469 u1
+comb n469 or n468 n378
+wire n470 u1
+comb n470 or n393 n395
+wire n471 u1
+comb n471 or n172 n173
+wire n472 u1
+comb n472 or n451 n386
+wire n473 u1
+comb n473 or n137 n387
+wire n474 u1
+comb n474 or n175 n176
+wire n451 u1
+comb n451 or n384 n385
+wire n475 u1
+comb n475 or n385 n386
+wire n476 u1
+comb n476 or n174 n175
+wire n477 u1
+comb n477 or n476 n176
+wire n478 u1
+comb n478 or n391 n393
+wire n479 u1
+comb n479 or n478 n395
+wire n244 u1
+comb n244 xor n441 one
+wire n480 u1
+comb n480 xor n268 one
+wire n482 u1
+comb n482 xor n481 one
+wire n484 u1
+comb n484 xor n483 one
+wire n486 u1
+comb n486 xor n485 one
+wire n488 u1
+comb n488 xor n487 one
+wire n490 u1
+comb n490 xor n489 one
+wire n491 u1
+comb n491 xor n470 one
+wire n492 u1
+comb n492 xor n445 one
+wire n493 u1
+comb n493 xor n446 one
+wire n494 u1
+comb n494 xor n447 one
+wire n133 u1
+comb n133 xor n471 one
+wire n496 u1
+comb n496 xor n495 one
+wire n498 u1
+comb n498 xor n497 one
+wire n499 u1
+comb n499 xor n472 one
+wire n500 u1
+comb n500 xor n448 one
+wire n501 u1
+comb n501 xor n473 one
+wire n502 u1
+comb n502 xor n386 one
+wire n503 u1
+comb n503 xor n382 one
+wire n504 u1
+comb n504 xor n381 one
+wire n505 u1
+comb n505 xor n383 one
+wire n506 u1
+comb n506 xor n380 one
+wire n507 u1
+comb n507 xor n451 one
+wire n508 u1
+comb n508 xor n475 one
+wire n509 u1
+comb n509 xor n453 one
+wire n510 u1
+comb n510 xor n477 one
+wire n511 u1
+comb n511 xor n454 one
+wire n512 u1
+comb n512 xor n461 one
+wire n513 u1
+comb n513 xor n479 one
+wire n514 u1
+comb n514 xor n457 one
+wire n515 u1
+comb n515 xor n460 one
+wire n516 u1
+comb n516 xor n462 one
+wire n518 u1
+comb n518 xor n517 one
+wire n519 u1
+comb n519 xor n273 one
+wire n521 u1
+comb n521 xor n520 one
+wire n523 u1
+comb n523 xor n522 one
+wire n524 u1
+comb n524 xor i_rst one
+wire n525 u1
+comb n525 xor n256 one
+wire n526 u1
+comb n526 xor n463 one
+wire n527 u1
+comb n527 xor n400 one
+wire n528 u1
+comb n528 xor n399 one
+wire n530 u1
+comb n530 xor n529 one
+wire n531 u1
+comb n531 xor n387 one
+wire n533 u1
+comb n533 xor n532 one
+wire n412 u1
+comb n412 mux n449 n535 n534
+wire n405 u1
+comb n405 mux n221 n536 n220
+wire n537 u1
+comb n537 mux n232 n536 n234
+wire n431 u1
+comb n431 mux n221 n538 n332
+wire n432 u1
+comb n432 mux n221 n539 n334
+wire n434 u1
+comb n434 mux n221 n540 n336
+wire n435 u1
+comb n435 mux n221 n541 n338
+wire n437 u1
+comb n437 mux n221 n542 n340
+wire n438 u1
+comb n438 mux n221 n483 zero
+wire n545 u1
+comb n545 mux n221 n544 n543
+wire n548 u1
+comb n548 mux n221 n547 n546
+wire n550 u1
+comb n550 mux n221 zero n549
+wire n552 u1
+comb n552 mux n221 zero n551
+wire n554 u1
+comb n554 mux n221 zero n553
+wire n555 u1
+comb n555 mux n221 one n481
+wire n556 u1
+comb n556 mux n221 n213 n217
+wire n557 u1
+comb n557 mux n221 n212 n216
+wire n559 u1
+comb n559 mux n558 n413 zero
+wire n560 u1
+comb n560 mux n558 n430 zero
+wire n562 u1
+comb n562 mux n558 n561 zero
+wire n564 u1
+comb n564 mux n558 n563 zero
+wire n565 u1
+comb n565 mux n558 n545 zero
+wire n566 u1
+comb n566 mux n558 n548 zero
+wire n567 u1
+comb n567 mux n558 n550 zero
+wire n568 u1
+comb n568 mux n558 n552 zero
+wire n569 u1
+comb n569 mux n558 n554 zero
+wire n570 u1
+comb n570 mux n558 n555 zero
+wire n571 u1
+comb n571 mux n558 n556 zero
+wire n572 u1
+comb n572 mux n558 n557 zero
+wire n240 u1
+comb n240 mux n223 n573 zero
+wire n242 u1
+comb n242 mux n223 n574 zero
+wire n576 u1
+comb n576 mux n476 zero n575
+wire n578 u1
+comb n578 mux n444 n576 n577
+wire n580 u1
+comb n580 mux n443 n578 n579
+wire n262 u1
+comb n262 mux n442 n580 n581
+wire n582 u1
+comb n582 mux n399 n261 zero
+wire n583 u1
+comb n583 mux n479 n582 n248
+wire n585 u1
+comb n585 mux n584 n258 n262
+wire n259 u1
+comb n259 mux n481 n256 n262
+wire n587 u1
+comb n587 mux n270 n269 n586
+wire n590 u1
+comb n590 mux n387 n589 n588
+wire n218 u1
+comb n218 mux n481 n590 n591
+wire n215 u1
+comb n215 mux n481 n5 n262
+wire n543 u1
+comb n543 mux n481 one n370
+wire n546 u1
+comb n546 mux n481 one n372
+wire n549 u1
+comb n549 mux n481 zero n374
+wire n551 u1
+comb n551 mux n481 zero n376
+wire n553 u1
+comb n553 mux n481 zero n378
+wire n544 u1
+comb n544 mux n481 zero n592
+wire n547 u1
+comb n547 mux n481 one n593
+wire n272 u1
+comb n272 mux n474 n595 n594
+wire n275 u1
+comb n275 mux n273 n597 n596
+wire n600 u1
+comb n600 mux n599 n598 n588
+wire n602 u1
+comb n602 mux n402 n589 n601
+wire n287 u1
+comb n287 mux n604 n603 n602
+wire n606 u1
+comb n606 mux n137 n537 n605
+wire n610 u1
+comb n610 mux n609 n608 n607
+wire n611 u1
+comb n611 mux n495 n426 n126
+wire n613 u1
+comb n613 mux n495 n612 n127
+wire n615 u1
+comb n615 mux n495 n614 n128
+wire n617 u1
+comb n617 mux n495 n616 n129
+wire n619 u1
+comb n619 mux n495 n618 n130
+wire n621 u1
+comb n621 mux n495 n620 n131
+wire n277 u1
+comb n277 mux i_dbus_ack n163 n611
+wire n279 u1
+comb n279 mux i_dbus_ack n164 n613
+wire n280 u1
+comb n280 mux i_dbus_ack n165 n615
+wire n281 u1
+comb n281 mux i_dbus_ack n166 n617
+wire n282 u1
+comb n282 mux i_dbus_ack n167 n619
+wire n283 u1
+comb n283 mux i_dbus_ack n168 n622
+wire n284 u1
+comb n284 mux i_dbus_ack n169 n132
+wire n285 u1
+comb n285 mux i_dbus_ack n170 n606
+wire n292 u1
+comb n292 mux i_dbus_ack n139 n102
+wire n294 u1
+comb n294 mux i_dbus_ack n140 n103
+wire n295 u1
+comb n295 mux i_dbus_ack n141 n104
+wire n296 u1
+comb n296 mux i_dbus_ack n142 n105
+wire n297 u1
+comb n297 mux i_dbus_ack n143 n106
+wire n298 u1
+comb n298 mux i_dbus_ack n144 n107
+wire n299 u1
+comb n299 mux i_dbus_ack n145 n108
+wire n300 u1
+comb n300 mux i_dbus_ack n146 n109
+wire n301 u1
+comb n301 mux i_dbus_ack n147 n110
+wire n302 u1
+comb n302 mux i_dbus_ack n148 n111
+wire n303 u1
+comb n303 mux i_dbus_ack n149 n112
+wire n304 u1
+comb n304 mux i_dbus_ack n150 n113
+wire n305 u1
+comb n305 mux i_dbus_ack n151 n114
+wire n306 u1
+comb n306 mux i_dbus_ack n152 n115
+wire n307 u1
+comb n307 mux i_dbus_ack n153 n116
+wire n308 u1
+comb n308 mux i_dbus_ack n154 n117
+wire n309 u1
+comb n309 mux i_dbus_ack n155 n118
+wire n310 u1
+comb n310 mux i_dbus_ack n156 n119
+wire n311 u1
+comb n311 mux i_dbus_ack n157 n120
+wire n312 u1
+comb n312 mux i_dbus_ack n158 n121
+wire n313 u1
+comb n313 mux i_dbus_ack n159 n122
+wire n314 u1
+comb n314 mux i_dbus_ack n160 n123
+wire n315 u1
+comb n315 mux i_dbus_ack n161 n124
+wire n316 u1
+comb n316 mux i_dbus_ack n162 n125
+wire n318 u1
+comb n318 mux n522 n624 n623
+wire n253 u1
+comb n253 mux n522 n489 n317
+wire n254 u1
+comb n254 mux n522 n624 n71
+wire n626 u1
+comb n626 mux n387 n625 n359
+wire n322 u1
+comb n322 mux i_ibus_ack n58 n326
+wire n325 u1
+comb n325 mux i_ibus_ack n50 n328
+wire n327 u1
+comb n327 mux i_ibus_ack n51 n330
+wire n329 u1
+comb n329 mux i_ibus_ack n52 n332
+wire n331 u1
+comb n331 mux i_ibus_ack n53 n334
+wire n333 u1
+comb n333 mux i_ibus_ack n54 n336
+wire n335 u1
+comb n335 mux i_ibus_ack n55 n338
+wire n337 u1
+comb n337 mux i_ibus_ack n56 n340
+wire n339 u1
+comb n339 mux i_ibus_ack n57 n626
+wire n341 u1
+comb n341 mux i_ibus_ack n45 n625
+wire n628 u1
+comb n628 mux n627 n625 n324
+wire n630 u1
+comb n630 mux n629 n343 n628
+wire n344 u1
+comb n344 mux i_ibus_ack n63 n348
+wire n347 u1
+comb n347 mux i_ibus_ack n64 n350
+wire n349 u1
+comb n349 mux i_ibus_ack n65 n352
+wire n351 u1
+comb n351 mux i_ibus_ack n66 n354
+wire n353 u1
+comb n353 mux i_ibus_ack n67 n356
+wire n355 u1
+comb n355 mux i_ibus_ack n68 n630
+wire n357 u1
+comb n357 mux i_ibus_ack n58 n361
+wire n360 u1
+comb n360 mux i_ibus_ack n59 n363
+wire n362 u1
+comb n362 mux i_ibus_ack n60 n365
+wire n364 u1
+comb n364 mux i_ibus_ack n61 n367
+wire n366 u1
+comb n366 mux i_ibus_ack n62 n346
+wire n368 u1
+comb n368 mux i_ibus_ack n45 n372
+wire n371 u1
+comb n371 mux i_ibus_ack n46 n374
+wire n373 u1
+comb n373 mux i_ibus_ack n47 n376
+wire n375 u1
+comb n375 mux i_ibus_ack n48 n378
+wire n377 u1
+comb n377 mux i_ibus_ack n49 n346
+wire n631 u1
+comb n631 mux n452 n359 n370
+wire n605 u1
+comb n605 mux n399 n625 n631
+wire n634 u1
+comb n634 mux n176 n633 n632
+wire n581 u1
+comb n581 mux n176 n332 n406
+wire n635 u1
+comb n635 xor n245 one
+wire n636 u1
+comb n636 xor n581 one
+wire n638 u1
+comb n638 xor n637 one
+wire n640 u1
+comb n640 xor n639 one
+wire n642 u1
+comb n642 xor n641 one
+wire n643 u1
+comb n643 xor n176 one
+wire n645 u1
+comb n645 xor n644 one
+wire n455 u1
+comb n455 xor n391 one
+wire n458 u1
+comb n458 xor n393 one
+wire n449 u1
+comb n449 or n210 n535
+wire n222 u1
+comb n222 or n646 n210
+wire n558 u1
+comb n558 or n647 n648
+wire n648 u1
+comb n648 and n221 n236
+wire n647 u1
+comb n647 and n232 n404
+wire n649 u1
+comb n649 or n233 n535
+wire n536 u1
+comb n536 and n241 n635
+wire n219 u1
+comb n219 and n243 n635
+wire n579 u1
+comb n579 or n575 n581
+wire n577 u1
+comb n577 and n575 n636
+wire n651 u1
+comb n651 and n650 n273
+wire n653 u1
+comb n653 and n651 n652
+wire n655 u1
+comb n655 or n653 n654
+wire n657 u1
+comb n657 and n656 n583
+wire n575 u1
+comb n575 or n655 n657
+wire n658 u1
+comb n658 and i_timer_irq n239
+wire n267 u1
+comb n267 and n658 n264
+wire n255 u1
+comb n255 and n267 n480
+wire n263 u1
+comb n263 and n659 n660
+wire n662 u1
+comb n662 and n650 n661
+wire n663 u1
+comb n663 and n662 n273
+wire n664 u1
+comb n664 or n257 n663
+wire n238 u1
+comb n238 or n664 n584
+wire n237 u1
+comb n237 and n482 n585
+wire n656 u1
+comb n656 and n665 n273
+wire n666 u1
+comb n666 and n656 n513
+wire n257 u1
+comb n257 and n481 n399
+wire n247 u1
+comb n247 or n666 n257
+wire n668 u1
+comb n668 and n667 n505
+wire n669 u1
+comb n669 and n482 n262
+wire n251 u1
+comb n251 or n668 n669
+wire n670 u1
+comb n670 or n256 n531
+wire n671 u1
+comb n671 and n482 n252
+wire n249 u1
+comb n249 or n670 n671
+wire n672 u1
+comb n672 and n531 n137
+wire n674 u1
+comb n674 or n673 n672
+wire n675 u1
+comb n675 and n482 n250
+wire n265 u1
+comb n265 or n674 n675
+wire n676 u1
+comb n676 and n482 n266
+wire n246 u1
+comb n246 or n673 n676
+wire n677 u1
+comb n677 and n665 n399
+wire n260 u1
+comb n260 or n677 n481
+wire n678 u1
+comb n678 and n239 n661
+wire n681 u1
+comb n681 or n679 n680
+wire n652 u1
+comb n652 or n678 n681
+wire n682 u1
+comb n682 or n175 n491
+wire n683 u1
+comb n683 and n174 n415
+wire n270 u1
+comb n270 or n682 n683
+wire n586 u1
+comb n586 and n643 n271
+wire n684 u1
+comb n684 or n492 n175
+wire n685 u1
+comb n685 and n174 n173
+wire n136 u1
+comb n136 or n684 n685
+wire n135 u1
+comb n135 or n493 n175
+wire n686 u1
+comb n686 or n494 n175
+wire n687 u1
+comb n687 and n174 n427
+wire n134 u1
+comb n134 or n686 n687
+wire n688 u1
+comb n688 and n172 n476
+wire n689 u1
+comb n689 and n173 n175
+wire n520 u1
+comb n520 or n688 n689
+wire n691 u1
+comb n691 and n690 n469
+wire n694 u1
+comb n694 and n692 n693
+wire n696 u1
+comb n696 and n695 n575
+wire n697 u1
+comb n697 or n694 n696
+wire n699 u1
+comb n699 and n698 n587
+wire n700 u1
+comb n700 or n697 n699
+wire n591 u1
+comb n591 or n700 n701
+wire n702 u1
+comb n702 or n481 n691
+wire n403 u1
+comb n403 and n273 n702
+wire n704 u1
+comb n704 or n481 n703
+wire n235 u1
+comb n235 and n273 n704
+wire n483 u1
+comb n483 or n604 n703
+wire n705 u1
+comb n705 and n703 n592
+wire n706 u1
+comb n706 and n703 n593
+wire n707 u1
+comb n707 or n481 n705
+wire n708 u1
+comb n708 or n584 n706
+wire n709 u1
+comb n709 and n484 n359
+wire n710 u1
+comb n710 and n484 n361
+wire n538 u1
+comb n538 or n707 n709
+wire n539 u1
+comb n539 or n708 n710
+wire n540 u1
+comb n540 and n363 n484
+wire n541 u1
+comb n541 and n365 n484
+wire n542 u1
+comb n542 and n367 n484
+wire n654 u1
+comb n654 and n537 n703
+wire n637 u1
+comb n637 and n606 n642
+wire n711 u1
+comb n711 xor n606 n596
+wire n712 u1
+comb n712 or n274 n487
+wire n594 u1
+comb n594 and n486 n712
+wire n713 u1
+comb n713 xor n406 n606
+wire n714 u1
+comb n714 and n713 n429
+wire n715 u1
+comb n715 and n175 n606
+wire n716 u1
+comb n716 and n715 n406
+wire n717 u1
+comb n717 or n714 n716
+wire n718 u1
+comb n718 and n274 n487
+wire n719 u1
+comb n719 and n510 n485
+wire n720 u1
+comb n720 or n588 n719
+wire n721 u1
+comb n721 and n511 n718
+wire n722 u1
+comb n722 or n720 n721
+wire n723 u1
+comb n723 and n176 n717
+wire n693 u1
+comb n693 or n722 n723
+wire n724 u1
+comb n724 and n599 n589
+wire n726 u1
+comb n726 and n601 n725
+wire n701 u1
+comb n701 or n724 n726
+wire n728 u1
+comb n728 and n727 n5
+wire n598 u1
+comb n598 and n605 n729
+wire n589 u1
+comb n589 and n730 n488
+wire n288 u1
+comb n288 and n731 n732
+wire n290 u1
+comb n290 and n731 n733
+wire n603 u1
+comb n603 and n537 n490
+wire n734 u1
+comb n734 and n428 n427
+wire n735 u1
+comb n735 and n458 n415
+wire n736 u1
+comb n736 or n734 n735
+wire n737 u1
+comb n737 and n415 n427
+wire n738 u1
+comb n738 or n736 n737
+wire n739 u1
+comb n739 and n415 n428
+wire n740 u1
+comb n740 or n738 n739
+wire n741 u1
+comb n741 and n458 n427
+wire n742 u1
+comb n742 or n740 n741
+wire n743 u1
+comb n743 and n273 n522
+wire n608 u1
+comb n608 and n743 n491
+wire n607 u1
+comb n607 and n273 n742
+wire n744 u1
+comb n744 and n399 n176
+wire n745 u1
+comb n745 or n523 n744
+wire n495 u1
+comb n495 and n609 n745
+wire n746 u1
+comb n746 and n492 n125
+wire n747 u1
+comb n747 and n493 n117
+wire n748 u1
+comb n748 or n746 n747
+wire n749 u1
+comb n749 and n494 n109
+wire n750 u1
+comb n750 or n748 n749
+wire n751 u1
+comb n751 and n133 n101
+wire n269 u1
+comb n269 or n750 n751
+wire n752 u1
+comb n752 or n610 n495
+wire n278 u1
+comb n278 or n752 i_dbus_ack
+wire n753 u1
+comb n753 and n609 n660
+wire n497 u1
+comb n497 and n753 n496
+wire n622 u1
+comb n622 and n621 n498
+wire n293 u1
+comb n293 or n610 i_dbus_ack
+wire n755 u1
+comb n755 and n406 n754
+wire n756 u1
+comb n756 and n605 n502
+wire n757 u1
+comb n757 and n756 n640
+wire n319 u1
+comb n319 and n758 n317
+wire n623 u1
+comb n623 and n100 n379
+wire n489 u1
+comb n489 or n487 n759
+wire n588 u1
+comb n588 and n172 n317
+wire n625 u1
+comb n625 and n321 n533
+wire n761 u1
+comb n761 and n273 n760
+wire n323 u1
+comb n323 or i_ibus_ack n761
+wire n342 u1
+comb n342 or i_ibus_ack n273
+wire n763 u1
+comb n763 and n273 n762
+wire n345 u1
+comb n345 or i_ibus_ack n763
+wire n765 u1
+comb n765 and n273 n764
+wire n358 u1
+comb n358 or i_ibus_ack n765
+wire n766 u1
+comb n766 and n273 n645
+wire n369 u1
+comb n369 or i_ibus_ack n766
+wire n767 u1
+comb n767 and n174 n425
+wire n768 u1
+comb n768 and n767 n416
+wire n769 u1
+comb n769 and n768 n531
+wire n770 u1
+comb n770 or n502 n769
+wire n771 u1
+comb n771 and n175 n643
+wire n772 u1
+comb n772 and n771 n416
+wire n773 u1
+comb n773 and n772 n531
+wire n774 u1
+comb n774 or n770 n773
+wire n609 u1
+comb n609 and n386 n425
+wire n775 u1
+comb n775 and n502 n531
+wire n776 u1
+comb n776 and n416 n386
+wire n692 u1
+comb n692 and n776 n531
+wire n698 u1
+comb n698 and n502 n416
+wire n777 u1
+comb n777 and n417 n384
+wire n754 u1
+comb n754 or n531 n777
+wire n778 u1
+comb n778 or n507 n500
+wire n779 u1
+comb n779 and n387 n778
+wire n780 u1
+comb n780 and n531 n386
+wire n599 u1
+comb n599 and n780 n384
+wire n725 u1
+comb n725 and n387 n384
+wire n781 u1
+comb n781 or n499 n500
+wire n783 u1
+comb n783 and n782 n383
+wire n784 u1
+comb n784 or n781 n783
+wire n727 u1
+comb n727 or n784 n501
+wire n785 u1
+comb n785 and n502 n387
+wire n786 u1
+comb n786 and n785 n384
+wire n787 u1
+comb n787 or n386 n786
+wire n788 u1
+comb n788 and n502 n414
+wire n789 u1
+comb n789 and n788 n416
+wire n644 u1
+comb n644 or n787 n789
+wire n695 u1
+comb n695 and n782 n477
+wire n790 u1
+comb n790 and n782 n382
+wire n584 u1
+comb n584 and n790 n510
+wire n791 u1
+comb n791 and n782 n503
+wire n667 u1
+comb n667 and n791 n510
+wire n792 u1
+comb n792 and n137 n379
+wire n793 u1
+comb n793 or n476 n792
+wire n596 u1
+comb n596 or n793 n387
+wire n794 u1
+comb n794 and n380 n503
+wire n795 u1
+comb n795 or n383 n794
+wire n703 u1
+comb n703 and n695 n795
+wire n797 u1
+comb n797 and n796 n504
+wire n650 u1
+comb n650 and n797 n505
+wire n796 u1
+comb n796 and n695 n506
+wire n798 u1
+comb n798 and n796 n381
+wire n659 u1
+comb n659 and n798 n505
+wire n799 u1
+comb n799 and n695 n382
+wire n665 u1
+comb n665 and n799 n505
+wire n532 u1
+comb n532 and n782 n176
+wire n592 u1
+comb n592 or n506 n382
+wire n593 u1
+comb n593 and n380 n383
+wire n800 u1
+comb n800 and n174 n175
+wire n801 u1
+comb n801 and n175 n176
+wire n641 u1
+comb n641 or n800 n801
+wire n627 u1
+comb n627 or n507 n508
+wire n629 u1
+comb n629 and n387 n416
+wire n802 u1
+comb n802 or n473 n386
+wire n762 u1
+comb n762 or n802 n416
+wire n782 u1
+comb n782 and n387 n386
+wire n803 u1
+comb n803 or n782 n414
+wire n764 u1
+comb n764 or n803 n384
+wire n804 u1
+comb n804 and n386 n384
+wire n805 u1
+comb n805 or n509 n804
+wire n760 u1
+comb n760 or n805 n532
+wire n731 u1
+comb n731 and n273 n523
+wire n729 u1
+comb n729 or n395 n512
+wire n487 u1
+comb n487 and n513 n408
+wire n759 u1
+comb n759 and n513 n409
+wire n806 u1
+comb n806 and n513 n410
+wire n661 u1
+comb n661 and n513 n411
+wire n660 u1
+comb n660 and n514 n411
+wire n679 u1
+comb n679 and n515 n411
+wire n680 u1
+comb n680 and n516 n408
+wire n807 u1
+comb n807 xor n272 n174
+wire n808 u1
+comb n808 or n384 n807
+wire n809 u1
+comb n809 and n387 n808
+wire n632 u1
+comb n632 and n399 n522
+wire n810 u1
+comb n810 and n809 n173
+wire n811 u1
+comb n811 and n775 n520
+wire n517 u1
+comb n517 or n810 n811
+wire n812 u1
+comb n812 and n519 n400
+wire n813 u1
+comb n813 or n632 n812
+wire n633 u1
+comb n633 and n621 n813
+wire n814 u1
+comb n814 and n609 n634
+wire n815 u1
+comb n815 or n814 i_dbus_ack
+wire n816 u1
+comb n816 and n632 n518
+wire n817 u1
+comb n817 and n387 n816
+wire n818 u1
+comb n818 or n815 n817
+wire n819 u1
+comb n819 and n692 n511
+wire n820 u1
+comb n820 and n819 n632
+wire n535 u1
+comb n535 or n818 n820
+wire n821 u1
+comb n821 and n812 n775
+wire n138 u1
+comb n138 and n821 n521
+wire n822 u1
+comb n822 and n517 n632
+wire n210 u1
+comb n210 or i_ibus_ack n822
+wire n690 u1
+comb n690 and n644 n523
+wire n823 u1
+comb n823 or n481 n387
+wire n824 u1
+comb n824 and n823 n774
+wire n825 u1
+comb n825 or n522 n824
+wire n826 u1
+comb n826 and n273 n825
+wire n827 u1
+comb n827 and n609 n400
+wire n828 u1
+comb n828 or n176 n621
+wire n829 u1
+comb n829 and n827 n828
+wire n317 u1
+comb n317 or n826 n829
+wire n37 u1
+comb n37 and n389 n524
+wire n830 u1
+comb n830 and n774 n525
+wire n522 u1
+comb n522 and n830 n527
+wire n399 u1
+comb n399 and n526 n411
+wire n286 u1
+comb n286 or n731 i_rst
+wire n398 u1
+comb n398 and n522 n527
+wire n401 u1
+comb n401 and n522 n809
+wire n673 u1
+comb n673 or n667 n256
+wire n481 u1
+comb n481 or n673 n397
+wire n831 u1
+comb n831 and n411 n528
+wire n407 u1
+comb n407 or n831 n649
+wire n832 u1
+comb n832 or i_ibus_ack n399
+wire n388 u1
+comb n388 or n832 i_rst
+wire n529 u1
+comb n529 or i_ibus_ack i_rst
+wire n833 u1
+comb n833 and n517 n522
+wire n834 u1
+comb n834 or n833 n397
+wire n396 u1
+comb n396 and n530 n834
+wire n835 u1
+comb n835 and n406 n642
+wire n604 u1
+comb n604 or n481 n584
+wire n639 u1
+comb n639 and n487 n779
+wire n836 u1
+comb n836 xor n757 n755
+wire n837 u1
+comb n837 and n757 n755
+wire n838 u1
+comb n838 xor n711 n406
+wire n839 u1
+comb n839 and n711 n406
+wire n840 u1
+comb n840 xor n638 n835
+wire n842 u1
+comb n842 and n289 n841
+wire n601 u1
+comb n601 xor n289 n841
+wire n732 u1
+comb n732 xor n843 n842
+wire n845 u1
+comb n845 and n291 n844
+wire n730 u1
+comb n730 xor n291 n844
+wire n733 u1
+comb n733 xor n846 n845
+wire n846 u1
+comb n846 and n600 n728
+wire n844 u1
+comb n844 xor n600 n728
+wire n534 u1
+comb n534 xor n413 n221
+wire n226 u1
+comb n226 xor n227 n847
+wire n228 u1
+comb n228 xor n229 n848
+wire n230 u1
+comb n230 xor n231 n849
+wire n612 u1
+comb n612 xor n422 n125
+wire n614 u1
+comb n614 xor n423 n850
+wire n616 u1
+comb n616 xor n421 n851
+wire n618 u1
+comb n618 xor n420 n852
+wire n620 u1
+comb n620 xor n424 n853
+wire n561 u1
+comb n561 xor n418 n227
+wire n563 u1
+comb n563 xor n419 n854
+wire n855 u1
+comb n855 and n411 n391
+wire n390 u1
+comb n390 xor n411 n391
+wire n392 u1
+comb n392 xor n393 n855
+wire n394 u1
+comb n394 xor n395 n856
+wire n595 u1
+comb n595 xor n597 n840
+wire n843 u1
+comb n843 and n806 n5
+wire n841 u1
+comb n841 xor n806 n5
+wire n857 u1
+comb n857 and n276 n838
+wire n485 u1
+comb n485 xor n276 n838
+wire n597 u1
+comb n597 xor n839 n857
+wire n858 u1
+comb n858 and n320 n836
+wire n624 u1
+comb n624 xor n320 n836
+wire n758 u1
+comb n758 xor n837 n858
+wire n856 u1
+comb n856 and n393 n855
+wire n859 u1
+comb n859 and n418 n227
+wire n854 u1
+comb n854 or n229 n859
+wire n646 u1
+comb n646 and n231 n849
+wire n848 u1
+comb n848 and n227 n847
+wire n860 u1
+comb n860 and n229 n227
+wire n849 u1
+comb n849 and n860 n847
+wire n847 u1
+comb n847 and n413 n221
+wire n853 u1
+comb n853 or n129 n861
+wire n851 u1
+comb n851 or n127 n862
+wire n852 u1
+comb n852 or n863 n864
+wire n863 u1
+comb n863 or n128 n865
+wire n850 u1
+comb n850 or n126 n866
+wire n861 u1
+comb n861 and n420 n852
+wire n862 u1
+comb n862 and n423 n850
+wire n867 u1
+comb n867 and n421 n423
+wire n864 u1
+comb n864 and n867 n850
+wire n865 u1
+comb n865 and n421 n127
+wire n866 u1
+comb n866 and n422 n125
+mem memory762 u2 576
+wire memory762_rd_2 u2
+comb memory762_rd_2 concat n438 n437
+wire memory762_rd_3 u3
+comb memory762_rd_3 concat memory762_rd_2 n435
+wire memory762_rd_4 u4
+comb memory762_rd_4 concat memory762_rd_3 n434
+wire memory762_rd_5 u5
+comb memory762_rd_5 concat memory762_rd_4 n432
+wire memory762_rd_6 u6
+comb memory762_rd_6 concat memory762_rd_5 n431
+wire memory762_rd_7 u7
+comb memory762_rd_7 concat memory762_rd_6 n231
+wire memory762_rd_8 u8
+comb memory762_rd_8 concat memory762_rd_7 n229
+wire memory762_rd_9 u9
+comb memory762_rd_9 concat memory762_rd_8 n227
+wire memory762_rd_10 u10
+comb memory762_rd_10 concat memory762_rd_9 n413
+wire memory762_wr_2 u2
+comb memory762_wr_2 concat n570 n569
+wire memory762_wr_3 u3
+comb memory762_wr_3 concat memory762_wr_2 n568
+wire memory762_wr_4 u4
+comb memory762_wr_4 concat memory762_wr_3 n567
+wire memory762_wr_5 u5
+comb memory762_wr_5 concat memory762_wr_4 n566
+wire memory762_wr_6 u6
+comb memory762_wr_6 concat memory762_wr_5 n565
+wire memory762_wr_7 u7
+comb memory762_wr_7 concat memory762_wr_6 n564
+wire memory762_wr_8 u8
+comb memory762_wr_8 concat memory762_wr_7 n562
+wire memory762_wr_9 u9
+comb memory762_wr_9 concat memory762_wr_8 n560
+wire memory762_wr_10 u10
+comb memory762_wr_10 concat memory762_wr_9 n559
+wire memory762_data_2 u2
+comb memory762_data_2 concat n572 n571
+wire memory762_data_out u2
+comb memory762_data_out read memory762 memory762_rd_10
+wire n573 u1
+comb n573 slice memory762_data_out 0 0
+wire n574 u1
+comb n574 slice memory762_data_out 1 1
+write memory762 clk n558 memory762_wr_10 memory762_data_2
+wire out_o_ibus_adr_2 u2
+comb out_o_ibus_adr_2 concat n36 n35
+wire out_o_ibus_adr_3 u3
+comb out_o_ibus_adr_3 concat out_o_ibus_adr_2 n34
+wire out_o_ibus_adr_4 u4
+comb out_o_ibus_adr_4 concat out_o_ibus_adr_3 n33
+wire out_o_ibus_adr_5 u5
+comb out_o_ibus_adr_5 concat out_o_ibus_adr_4 n32
+wire out_o_ibus_adr_6 u6
+comb out_o_ibus_adr_6 concat out_o_ibus_adr_5 n31
+wire out_o_ibus_adr_7 u7
+comb out_o_ibus_adr_7 concat out_o_ibus_adr_6 n30
+wire out_o_ibus_adr_8 u8
+comb out_o_ibus_adr_8 concat out_o_ibus_adr_7 n29
+wire out_o_ibus_adr_9 u9
+comb out_o_ibus_adr_9 concat out_o_ibus_adr_8 n28
+wire out_o_ibus_adr_10 u10
+comb out_o_ibus_adr_10 concat out_o_ibus_adr_9 n27
+wire out_o_ibus_adr_11 u11
+comb out_o_ibus_adr_11 concat out_o_ibus_adr_10 n26
+wire out_o_ibus_adr_12 u12
+comb out_o_ibus_adr_12 concat out_o_ibus_adr_11 n25
+wire out_o_ibus_adr_13 u13
+comb out_o_ibus_adr_13 concat out_o_ibus_adr_12 n24
+wire out_o_ibus_adr_14 u14
+comb out_o_ibus_adr_14 concat out_o_ibus_adr_13 n23
+wire out_o_ibus_adr_15 u15
+comb out_o_ibus_adr_15 concat out_o_ibus_adr_14 n22
+wire out_o_ibus_adr_16 u16
+comb out_o_ibus_adr_16 concat out_o_ibus_adr_15 n21
+wire out_o_ibus_adr_17 u17
+comb out_o_ibus_adr_17 concat out_o_ibus_adr_16 n20
+wire out_o_ibus_adr_18 u18
+comb out_o_ibus_adr_18 concat out_o_ibus_adr_17 n19
+wire out_o_ibus_adr_19 u19
+comb out_o_ibus_adr_19 concat out_o_ibus_adr_18 n18
+wire out_o_ibus_adr_20 u20
+comb out_o_ibus_adr_20 concat out_o_ibus_adr_19 n17
+wire out_o_ibus_adr_21 u21
+comb out_o_ibus_adr_21 concat out_o_ibus_adr_20 n16
+wire out_o_ibus_adr_22 u22
+comb out_o_ibus_adr_22 concat out_o_ibus_adr_21 n15
+wire out_o_ibus_adr_23 u23
+comb out_o_ibus_adr_23 concat out_o_ibus_adr_22 n14
+wire out_o_ibus_adr_24 u24
+comb out_o_ibus_adr_24 concat out_o_ibus_adr_23 n13
+wire out_o_ibus_adr_25 u25
+comb out_o_ibus_adr_25 concat out_o_ibus_adr_24 n12
+wire out_o_ibus_adr_26 u26
+comb out_o_ibus_adr_26 concat out_o_ibus_adr_25 n11
+wire out_o_ibus_adr_27 u27
+comb out_o_ibus_adr_27 concat out_o_ibus_adr_26 n10
+wire out_o_ibus_adr_28 u28
+comb out_o_ibus_adr_28 concat out_o_ibus_adr_27 n9
+wire out_o_ibus_adr_29 u29
+comb out_o_ibus_adr_29 concat out_o_ibus_adr_28 n8
+wire out_o_ibus_adr_30 u30
+comb out_o_ibus_adr_30 concat out_o_ibus_adr_29 n7
+wire out_o_ibus_adr_31 u31
+comb out_o_ibus_adr_31 concat out_o_ibus_adr_30 n6
+wire out_o_ibus_adr_32 u32
+comb out_o_ibus_adr_32 concat out_o_ibus_adr_31 n5
+comb o_ibus_adr copy out_o_ibus_adr_32
+comb o_ibus_cyc copy n37
+wire out_o_dbus_adr_2 u2
+comb out_o_dbus_adr_2 concat n100 n99
+wire out_o_dbus_adr_3 u3
+comb out_o_dbus_adr_3 concat out_o_dbus_adr_2 n98
+wire out_o_dbus_adr_4 u4
+comb out_o_dbus_adr_4 concat out_o_dbus_adr_3 n97
+wire out_o_dbus_adr_5 u5
+comb out_o_dbus_adr_5 concat out_o_dbus_adr_4 n96
+wire out_o_dbus_adr_6 u6
+comb out_o_dbus_adr_6 concat out_o_dbus_adr_5 n95
+wire out_o_dbus_adr_7 u7
+comb out_o_dbus_adr_7 concat out_o_dbus_adr_6 n94
+wire out_o_dbus_adr_8 u8
+comb out_o_dbus_adr_8 concat out_o_dbus_adr_7 n93
+wire out_o_dbus_adr_9 u9
+comb out_o_dbus_adr_9 concat out_o_dbus_adr_8 n92
+wire out_o_dbus_adr_10 u10
+comb out_o_dbus_adr_10 concat out_o_dbus_adr_9 n91
+wire out_o_dbus_adr_11 u11
+comb out_o_dbus_adr_11 concat out_o_dbus_adr_10 n90
+wire out_o_dbus_adr_12 u12
+comb out_o_dbus_adr_12 concat out_o_dbus_adr_11 n89
+wire out_o_dbus_adr_13 u13
+comb out_o_dbus_adr_13 concat out_o_dbus_adr_12 n88
+wire out_o_dbus_adr_14 u14
+comb out_o_dbus_adr_14 concat out_o_dbus_adr_13 n87
+wire out_o_dbus_adr_15 u15
+comb out_o_dbus_adr_15 concat out_o_dbus_adr_14 n86
+wire out_o_dbus_adr_16 u16
+comb out_o_dbus_adr_16 concat out_o_dbus_adr_15 n85
+wire out_o_dbus_adr_17 u17
+comb out_o_dbus_adr_17 concat out_o_dbus_adr_16 n84
+wire out_o_dbus_adr_18 u18
+comb out_o_dbus_adr_18 concat out_o_dbus_adr_17 n83
+wire out_o_dbus_adr_19 u19
+comb out_o_dbus_adr_19 concat out_o_dbus_adr_18 n82
+wire out_o_dbus_adr_20 u20
+comb out_o_dbus_adr_20 concat out_o_dbus_adr_19 n81
+wire out_o_dbus_adr_21 u21
+comb out_o_dbus_adr_21 concat out_o_dbus_adr_20 n80
+wire out_o_dbus_adr_22 u22
+comb out_o_dbus_adr_22 concat out_o_dbus_adr_21 n79
+wire out_o_dbus_adr_23 u23
+comb out_o_dbus_adr_23 concat out_o_dbus_adr_22 n78
+wire out_o_dbus_adr_24 u24
+comb out_o_dbus_adr_24 concat out_o_dbus_adr_23 n77
+wire out_o_dbus_adr_25 u25
+comb out_o_dbus_adr_25 concat out_o_dbus_adr_24 n76
+wire out_o_dbus_adr_26 u26
+comb out_o_dbus_adr_26 concat out_o_dbus_adr_25 n75
+wire out_o_dbus_adr_27 u27
+comb out_o_dbus_adr_27 concat out_o_dbus_adr_26 n74
+wire out_o_dbus_adr_28 u28
+comb out_o_dbus_adr_28 concat out_o_dbus_adr_27 n73
+wire out_o_dbus_adr_29 u29
+comb out_o_dbus_adr_29 concat out_o_dbus_adr_28 n72
+wire out_o_dbus_adr_30 u30
+comb out_o_dbus_adr_30 concat out_o_dbus_adr_29 n71
+wire out_o_dbus_adr_31 u31
+comb out_o_dbus_adr_31 concat out_o_dbus_adr_30 zero
+wire out_o_dbus_adr_32 u32
+comb out_o_dbus_adr_32 concat out_o_dbus_adr_31 zero
+comb o_dbus_adr copy out_o_dbus_adr_32
+wire out_o_dbus_dat_2 u2
+comb out_o_dbus_dat_2 concat n132 n131
+wire out_o_dbus_dat_3 u3
+comb out_o_dbus_dat_3 concat out_o_dbus_dat_2 n130
+wire out_o_dbus_dat_4 u4
+comb out_o_dbus_dat_4 concat out_o_dbus_dat_3 n129
+wire out_o_dbus_dat_5 u5
+comb out_o_dbus_dat_5 concat out_o_dbus_dat_4 n128
+wire out_o_dbus_dat_6 u6
+comb out_o_dbus_dat_6 concat out_o_dbus_dat_5 n127
+wire out_o_dbus_dat_7 u7
+comb out_o_dbus_dat_7 concat out_o_dbus_dat_6 n126
+wire out_o_dbus_dat_8 u8
+comb out_o_dbus_dat_8 concat out_o_dbus_dat_7 n125
+wire out_o_dbus_dat_9 u9
+comb out_o_dbus_dat_9 concat out_o_dbus_dat_8 n124
+wire out_o_dbus_dat_10 u10
+comb out_o_dbus_dat_10 concat out_o_dbus_dat_9 n123
+wire out_o_dbus_dat_11 u11
+comb out_o_dbus_dat_11 concat out_o_dbus_dat_10 n122
+wire out_o_dbus_dat_12 u12
+comb out_o_dbus_dat_12 concat out_o_dbus_dat_11 n121
+wire out_o_dbus_dat_13 u13
+comb out_o_dbus_dat_13 concat out_o_dbus_dat_12 n120
+wire out_o_dbus_dat_14 u14
+comb out_o_dbus_dat_14 concat out_o_dbus_dat_13 n119
+wire out_o_dbus_dat_15 u15
+comb out_o_dbus_dat_15 concat out_o_dbus_dat_14 n118
+wire out_o_dbus_dat_16 u16
+comb out_o_dbus_dat_16 concat out_o_dbus_dat_15 n117
+wire out_o_dbus_dat_17 u17
+comb out_o_dbus_dat_17 concat out_o_dbus_dat_16 n116
+wire out_o_dbus_dat_18 u18
+comb out_o_dbus_dat_18 concat out_o_dbus_dat_17 n115
+wire out_o_dbus_dat_19 u19
+comb out_o_dbus_dat_19 concat out_o_dbus_dat_18 n114
+wire out_o_dbus_dat_20 u20
+comb out_o_dbus_dat_20 concat out_o_dbus_dat_19 n113
+wire out_o_dbus_dat_21 u21
+comb out_o_dbus_dat_21 concat out_o_dbus_dat_20 n112
+wire out_o_dbus_dat_22 u22
+comb out_o_dbus_dat_22 concat out_o_dbus_dat_21 n111
+wire out_o_dbus_dat_23 u23
+comb out_o_dbus_dat_23 concat out_o_dbus_dat_22 n110
+wire out_o_dbus_dat_24 u24
+comb out_o_dbus_dat_24 concat out_o_dbus_dat_23 n109
+wire out_o_dbus_dat_25 u25
+comb out_o_dbus_dat_25 concat out_o_dbus_dat_24 n108
+wire out_o_dbus_dat_26 u26
+comb out_o_dbus_dat_26 concat out_o_dbus_dat_25 n107
+wire out_o_dbus_dat_27 u27
+comb out_o_dbus_dat_27 concat out_o_dbus_dat_26 n106
+wire out_o_dbus_dat_28 u28
+comb out_o_dbus_dat_28 concat out_o_dbus_dat_27 n105
+wire out_o_dbus_dat_29 u29
+comb out_o_dbus_dat_29 concat out_o_dbus_dat_28 n104
+wire out_o_dbus_dat_30 u30
+comb out_o_dbus_dat_30 concat out_o_dbus_dat_29 n103
+wire out_o_dbus_dat_31 u31
+comb out_o_dbus_dat_31 concat out_o_dbus_dat_30 n102
+wire out_o_dbus_dat_32 u32
+comb out_o_dbus_dat_32 concat out_o_dbus_dat_31 n101
+comb o_dbus_dat copy out_o_dbus_dat_32
+wire out_o_dbus_sel_2 u2
+comb out_o_dbus_sel_2 concat n136 n135
+wire out_o_dbus_sel_3 u3
+comb out_o_dbus_sel_3 concat out_o_dbus_sel_2 n134
+wire out_o_dbus_sel_4 u4
+comb out_o_dbus_sel_4 concat out_o_dbus_sel_3 n133
+comb o_dbus_sel copy out_o_dbus_sel_4
+comb o_dbus_we copy n137
+comb o_dbus_cyc copy n138
+wire out_o_ext_rs1_2 u2
+comb out_o_ext_rs1_2 concat n100 n99
+wire out_o_ext_rs1_3 u3
+comb out_o_ext_rs1_3 concat out_o_ext_rs1_2 n98
+wire out_o_ext_rs1_4 u4
+comb out_o_ext_rs1_4 concat out_o_ext_rs1_3 n97
+wire out_o_ext_rs1_5 u5
+comb out_o_ext_rs1_5 concat out_o_ext_rs1_4 n96
+wire out_o_ext_rs1_6 u6
+comb out_o_ext_rs1_6 concat out_o_ext_rs1_5 n95
+wire out_o_ext_rs1_7 u7
+comb out_o_ext_rs1_7 concat out_o_ext_rs1_6 n94
+wire out_o_ext_rs1_8 u8
+comb out_o_ext_rs1_8 concat out_o_ext_rs1_7 n93
+wire out_o_ext_rs1_9 u9
+comb out_o_ext_rs1_9 concat out_o_ext_rs1_8 n92
+wire out_o_ext_rs1_10 u10
+comb out_o_ext_rs1_10 concat out_o_ext_rs1_9 n91
+wire out_o_ext_rs1_11 u11
+comb out_o_ext_rs1_11 concat out_o_ext_rs1_10 n90
+wire out_o_ext_rs1_12 u12
+comb out_o_ext_rs1_12 concat out_o_ext_rs1_11 n89
+wire out_o_ext_rs1_13 u13
+comb out_o_ext_rs1_13 concat out_o_ext_rs1_12 n88
+wire out_o_ext_rs1_14 u14
+comb out_o_ext_rs1_14 concat out_o_ext_rs1_13 n87
+wire out_o_ext_rs1_15 u15
+comb out_o_ext_rs1_15 concat out_o_ext_rs1_14 n86
+wire out_o_ext_rs1_16 u16
+comb out_o_ext_rs1_16 concat out_o_ext_rs1_15 n85
+wire out_o_ext_rs1_17 u17
+comb out_o_ext_rs1_17 concat out_o_ext_rs1_16 n84
+wire out_o_ext_rs1_18 u18
+comb out_o_ext_rs1_18 concat out_o_ext_rs1_17 n83
+wire out_o_ext_rs1_19 u19
+comb out_o_ext_rs1_19 concat out_o_ext_rs1_18 n82
+wire out_o_ext_rs1_20 u20
+comb out_o_ext_rs1_20 concat out_o_ext_rs1_19 n81
+wire out_o_ext_rs1_21 u21
+comb out_o_ext_rs1_21 concat out_o_ext_rs1_20 n80
+wire out_o_ext_rs1_22 u22
+comb out_o_ext_rs1_22 concat out_o_ext_rs1_21 n79
+wire out_o_ext_rs1_23 u23
+comb out_o_ext_rs1_23 concat out_o_ext_rs1_22 n78
+wire out_o_ext_rs1_24 u24
+comb out_o_ext_rs1_24 concat out_o_ext_rs1_23 n77
+wire out_o_ext_rs1_25 u25
+comb out_o_ext_rs1_25 concat out_o_ext_rs1_24 n76
+wire out_o_ext_rs1_26 u26
+comb out_o_ext_rs1_26 concat out_o_ext_rs1_25 n75
+wire out_o_ext_rs1_27 u27
+comb out_o_ext_rs1_27 concat out_o_ext_rs1_26 n74
+wire out_o_ext_rs1_28 u28
+comb out_o_ext_rs1_28 concat out_o_ext_rs1_27 n73
+wire out_o_ext_rs1_29 u29
+comb out_o_ext_rs1_29 concat out_o_ext_rs1_28 n72
+wire out_o_ext_rs1_30 u30
+comb out_o_ext_rs1_30 concat out_o_ext_rs1_29 n71
+wire out_o_ext_rs1_31 u31
+comb out_o_ext_rs1_31 concat out_o_ext_rs1_30 n173
+wire out_o_ext_rs1_32 u32
+comb out_o_ext_rs1_32 concat out_o_ext_rs1_31 n172
+comb o_ext_rs1 copy out_o_ext_rs1_32
+wire out_o_ext_rs2_2 u2
+comb out_o_ext_rs2_2 concat n132 n131
+wire out_o_ext_rs2_3 u3
+comb out_o_ext_rs2_3 concat out_o_ext_rs2_2 n130
+wire out_o_ext_rs2_4 u4
+comb out_o_ext_rs2_4 concat out_o_ext_rs2_3 n129
+wire out_o_ext_rs2_5 u5
+comb out_o_ext_rs2_5 concat out_o_ext_rs2_4 n128
+wire out_o_ext_rs2_6 u6
+comb out_o_ext_rs2_6 concat out_o_ext_rs2_5 n127
+wire out_o_ext_rs2_7 u7
+comb out_o_ext_rs2_7 concat out_o_ext_rs2_6 n126
+wire out_o_ext_rs2_8 u8
+comb out_o_ext_rs2_8 concat out_o_ext_rs2_7 n125
+wire out_o_ext_rs2_9 u9
+comb out_o_ext_rs2_9 concat out_o_ext_rs2_8 n124
+wire out_o_ext_rs2_10 u10
+comb out_o_ext_rs2_10 concat out_o_ext_rs2_9 n123
+wire out_o_ext_rs2_11 u11
+comb out_o_ext_rs2_11 concat out_o_ext_rs2_10 n122
+wire out_o_ext_rs2_12 u12
+comb out_o_ext_rs2_12 concat out_o_ext_rs2_11 n121
+wire out_o_ext_rs2_13 u13
+comb out_o_ext_rs2_13 concat out_o_ext_rs2_12 n120
+wire out_o_ext_rs2_14 u14
+comb out_o_ext_rs2_14 concat out_o_ext_rs2_13 n119
+wire out_o_ext_rs2_15 u15
+comb out_o_ext_rs2_15 concat out_o_ext_rs2_14 n118
+wire out_o_ext_rs2_16 u16
+comb out_o_ext_rs2_16 concat out_o_ext_rs2_15 n117
+wire out_o_ext_rs2_17 u17
+comb out_o_ext_rs2_17 concat out_o_ext_rs2_16 n116
+wire out_o_ext_rs2_18 u18
+comb out_o_ext_rs2_18 concat out_o_ext_rs2_17 n115
+wire out_o_ext_rs2_19 u19
+comb out_o_ext_rs2_19 concat out_o_ext_rs2_18 n114
+wire out_o_ext_rs2_20 u20
+comb out_o_ext_rs2_20 concat out_o_ext_rs2_19 n113
+wire out_o_ext_rs2_21 u21
+comb out_o_ext_rs2_21 concat out_o_ext_rs2_20 n112
+wire out_o_ext_rs2_22 u22
+comb out_o_ext_rs2_22 concat out_o_ext_rs2_21 n111
+wire out_o_ext_rs2_23 u23
+comb out_o_ext_rs2_23 concat out_o_ext_rs2_22 n110
+wire out_o_ext_rs2_24 u24
+comb out_o_ext_rs2_24 concat out_o_ext_rs2_23 n109
+wire out_o_ext_rs2_25 u25
+comb out_o_ext_rs2_25 concat out_o_ext_rs2_24 n108
+wire out_o_ext_rs2_26 u26
+comb out_o_ext_rs2_26 concat out_o_ext_rs2_25 n107
+wire out_o_ext_rs2_27 u27
+comb out_o_ext_rs2_27 concat out_o_ext_rs2_26 n106
+wire out_o_ext_rs2_28 u28
+comb out_o_ext_rs2_28 concat out_o_ext_rs2_27 n105
+wire out_o_ext_rs2_29 u29
+comb out_o_ext_rs2_29 concat out_o_ext_rs2_28 n104
+wire out_o_ext_rs2_30 u30
+comb out_o_ext_rs2_30 concat out_o_ext_rs2_29 n103
+wire out_o_ext_rs2_31 u31
+comb out_o_ext_rs2_31 concat out_o_ext_rs2_30 n102
+wire out_o_ext_rs2_32 u32
+comb out_o_ext_rs2_32 concat out_o_ext_rs2_31 n101
+comb o_ext_rs2 copy out_o_ext_rs2_32
+wire out_o_ext_funct3_2 u2
+comb out_o_ext_funct3_2 concat n176 n175
+wire out_o_ext_funct3_3 u3
+comb out_o_ext_funct3_3 concat out_o_ext_funct3_2 n174
+comb o_ext_funct3 copy out_o_ext_funct3_3
+comb o_mdu_valid copy zero
+end

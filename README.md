@@ -35,6 +35,11 @@ A separate [SERV RISC-V memory-interface port](benchmarks/serv/README.md)
 matched upstream LUT4 count and median routed Fmax, with formal equivalence
 for the fixed one-bit profile.
 
+The [full official SERV comparison](benchmarks/serv-core/README.md)
+reconstructs the default SERV profile in Vexim. The port matched the
+program's bus trace and used 291 versus 266 LUT4s, with median routed
+Fmax of 71.96 versus 73.93 MHz.
+
 The [complete educational RV32 CPU benchmark](benchmarks/rv32/README.md)
 compares two Vexim register-bank designs against the same SystemVerilog
 reference over 20,000 simulated cycles and five routing seeds.
