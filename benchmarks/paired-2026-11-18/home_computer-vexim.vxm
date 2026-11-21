@@ -1,0 +1,246 @@
+module home_computer
+input clk u1
+input rst u1
+input instruction u16
+input sensors u8
+input net_data u8
+input net_valid u1
+output pc u8
+output accumulator u8
+output gpio u8
+output halted u1
+output fault u1
+output net_ack u1
+output reboot u1
+
+mem ram u8 16
+
+wire opcode u4
+wire unused_mid u4
+wire imm u8
+wire addr u4
+
+comb opcode slice instruction 15 12
+comb unused_mid slice instruction 11 8
+comb imm slice instruction 7 0
+comb addr slice instruction 3 0
+
+wire wd u8
+wire c8_0 u8
+wire c8_1 u8
+wire c8_2 u8
+wire c8_255 u8
+comb c8_0 const 0
+comb c8_1 const 1
+comb c8_2 const 2
+comb c8_255 const 255
+
+wire c4_1 u4
+wire c4_2 u4
+wire c4_3 u4
+wire c4_4 u4
+wire c4_5 u4
+wire c4_6 u4
+wire c4_7 u4
+wire c4_8 u4
+wire c4_9 u4
+wire c4_10 u4
+wire c4_11 u4
+wire c4_12 u4
+wire c4_13 u4
+wire c4_14 u4
+wire c4_15 u4
+comb c4_1 const 1
+comb c4_2 const 2
+comb c4_3 const 3
+comb c4_4 const 4
+comb c4_5 const 5
+comb c4_6 const 6
+comb c4_7 const 7
+comb c4_8 const 8
+comb c4_9 const 9
+comb c4_10 const 10
+comb c4_11 const 11
+comb c4_12 const 12
+comb c4_13 const 13
+comb c4_14 const 14
+comb c4_15 const 15
+
+wire c1_0 u1
+comb c1_0 const 0
+
+wire wd_exp u1
+comb wd_exp eq wd c8_255
+
+wire not_rst u1
+wire not_wd_exp u1
+wire not_halted u1
+wire not_fault u1
+comb not_rst eq rst c1_0
+comb not_wd_exp eq wd_exp c1_0
+comb not_halted eq halted c1_0
+comb not_fault eq fault c1_0
+
+wire run_a u1
+wire run_b u1
+wire running u1
+comb run_a and not_rst not_wd_exp
+comb run_b and not_halted not_fault
+comb running and run_a run_b
+
+wire is_ldi u1
+wire is_addi u1
+wire is_xori u1
+wire is_load u1
+wire is_store u1
+wire is_in u1
+wire is_out u1
+wire is_jmp u1
+wire is_jz u1
+wire is_kick u1
+wire is_halt u1
+wire is_op12 u1
+wire is_op13 u1
+wire is_op14 u1
+wire is_op15 u1
+
+comb is_ldi eq opcode c4_1
+comb is_addi eq opcode c4_2
+comb is_xori eq opcode c4_3
+comb is_load eq opcode c4_4
+comb is_store eq opcode c4_5
+comb is_in eq opcode c4_6
+comb is_out eq opcode c4_7
+comb is_jmp eq opcode c4_8
+comb is_jz eq opcode c4_9
+comb is_kick eq opcode c4_10
+comb is_halt eq opcode c4_11
+comb is_op12 eq opcode c4_12
+comb is_op13 eq opcode c4_13
+comb is_op14 eq opcode c4_14
+comb is_op15 eq opcode c4_15
+
+wire is_12_13 u1
+wire is_14_15 u1
+wire is_fault_op u1
+comb is_12_13 or is_op12 is_op13
+comb is_14_15 or is_op14 is_op15
+comb is_fault_op or is_12_13 is_14_15
+
+wire is_halt_or_fault u1
+comb is_halt_or_fault or is_halt is_fault_op
+
+# IN port decode
+wire imm_is_0 u1
+wire imm_is_1 u1
+wire imm_is_2 u1
+comb imm_is_0 eq imm c8_0
+comb imm_is_1 eq imm c8_1
+comb imm_is_2 eq imm c8_2
+
+wire net_data_gated u8
+wire net_valid_zext u8
+comb net_data_gated mux net_valid net_data c8_0
+comb net_valid_zext zext net_valid
+
+wire in_p2 u8
+wire in_p1 u8
+wire in_val u8
+comb in_p2 mux imm_is_2 net_valid_zext c8_0
+comb in_p1 mux imm_is_1 net_data_gated in_p2
+comb in_val mux imm_is_0 sensors in_p1
+
+# net_ack
+wire in_port1 u1
+wire in_port1_valid u1
+comb in_port1 and is_in imm_is_1
+comb in_port1_valid and in_port1 net_valid
+comb net_ack and running in_port1_valid
+
+# RAM
+wire ram_rdata u8
+wire ram_we u1
+comb ram_rdata read ram addr
+comb ram_we and running is_store
+write ram clk ram_we addr accumulator
+
+# Accumulator update
+wire acc_add u8
+wire acc_xor u8
+comb acc_add add accumulator imm
+comb acc_xor xor accumulator imm
+
+wire acc_m1 u8
+wire acc_m2 u8
+wire acc_m3 u8
+wire acc_m4 u8
+wire acc_exec u8
+wire acc_hold u8
+wire next_acc u8
+comb acc_m1 mux is_in in_val accumulator
+comb acc_m2 mux is_load ram_rdata acc_m1
+comb acc_m3 mux is_xori acc_xor acc_m2
+comb acc_m4 mux is_addi acc_add acc_m3
+comb acc_exec mux is_ldi imm acc_m4
+comb acc_hold mux running acc_exec accumulator
+comb next_acc mux wd_exp c8_0 acc_hold
+sync accumulator clk rst next_acc 0
+
+# PC update
+wire pc_inc u8
+wire acc_is_0 u1
+wire jz_take u1
+wire take_jump u1
+wire pc_jump_or_inc u8
+wire pc_exec u8
+wire pc_hold u8
+wire next_pc u8
+comb pc_inc add pc c8_1
+comb acc_is_0 eq accumulator c8_0
+comb jz_take and is_jz acc_is_0
+comb take_jump or is_jmp jz_take
+comb pc_jump_or_inc mux take_jump imm pc_inc
+comb pc_exec mux is_halt_or_fault pc pc_jump_or_inc
+comb pc_hold mux running pc_exec pc
+comb next_pc mux wd_exp c8_0 pc_hold
+sync pc clk rst next_pc 0
+
+# GPIO update
+wire gpio_exec u8
+wire gpio_hold u8
+wire next_gpio u8
+comb gpio_exec mux is_out accumulator gpio
+comb gpio_hold mux running gpio_exec gpio
+comb next_gpio mux wd_exp c8_0 gpio_hold
+sync gpio clk rst next_gpio 0
+
+# Halted & Fault update
+wire set_halt u1
+wire halt_hold u1
+wire next_halted u1
+comb set_halt and running is_halt_or_fault
+comb halt_hold or halted set_halt
+comb next_halted mux wd_exp c1_0 halt_hold
+sync halted clk rst next_halted 0
+
+wire set_fault u1
+wire fault_hold u1
+wire next_fault u1
+comb set_fault and running is_fault_op
+comb fault_hold or fault set_fault
+comb next_fault mux wd_exp c1_0 fault_hold
+sync fault clk rst next_fault 0
+
+# Watchdog & Reboot update
+wire wd_inc u8
+wire run_kick u1
+wire wd_or_kick u8
+wire next_wd u8
+comb wd_inc add wd c8_1
+comb run_kick and running is_kick
+comb wd_or_kick mux run_kick c8_0 wd_inc
+comb next_wd mux wd_exp c8_0 wd_or_kick
+sync wd clk rst next_wd 0
+
+sync reboot clk rst wd_exp 0
+end

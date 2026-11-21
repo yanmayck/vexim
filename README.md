@@ -1,6 +1,48 @@
 # Vexim
 
-Vexim is a small, explicitly typed hardware description language. The Rust compiler, `veximc`, checks `.vxm` files, builds a typed internal representation, and emits synthesizable SystemVerilog.
+An explicitly typed hardware language with a Rust compiler that emits synthesizable SystemVerilog.
+
+## Measured results
+
+Frozen designs from one paired Gemini 4 Argon experiment, mapped with Yosys 0.33
+to iCE40 primitives. All six designs pass Verilator lint, independent simulation, and Yosys synthesis.
+
+| Block | Generic cells Vexim / SV | iCE40 LUT4 Vexim / SV | FF Vexim / SV | iCE40 synthesis seconds Vexim / SV |
+|---|---:|---:|---:|---:|
+| Round-robin arbiter | 56 / 80 | 23 / 21 | 7 / 7 | 1.07 / 0.92 |
+| Memory controller | 396 / 557 | 151 / 237 | 68 / 68 | 1.22 / 1.32 |
+| Automation CPU | 530 / 660 | 228 / 229 | 163 / 163 | 1.42 / 1.62 |
+
+The memory design uses 36.3% fewer LUT4s in this sample. The arbiter uses
+9.5% more, and the CPU is effectively tied. These are synthesis results
+before placement and routing. Power, maximum clock frequency and device fit
+require further measurement. Generation took more tokens and time in Vexim
+in the original experiment. See [method and frozen sources](benchmarks/README.md).
+
+Reproduce the table and simulations from this checkout with Docker:
+
+```sh
+sh run_benchmarks.sh
+```
+
+The first run downloads and builds the tool image. Cached runs complete in
+seconds on the development machine. Synthesis times depend on the host.
+
+## Write and compile hardware
+
+Install from source:
+
+```sh
+cargo install --git https://github.com/yanmayck/vexim veximc
+```
+
+An explicit-width adder in Vexim and its equivalent SystemVerilog expression:
+
+| Vexim operations | SystemVerilog |
+|---|---|
+| `comb left zext a` | `wire [8:0] left = {1'b0, a};` |
+| `comb right zext b` | `wire [8:0] right = {1'b0, b};` |
+| `comb sum add left right` | `assign sum = left + right;` |
 
 The [language specification](SPEC.md) describes the syntax, width rules, and register behavior with complete examples.
 

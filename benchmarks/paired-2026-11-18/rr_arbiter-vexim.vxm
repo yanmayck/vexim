@@ -1,0 +1,153 @@
+module rr_arbiter
+input clk u1
+input rst u1
+input req u4
+input ready u1
+output valid u1
+output grant u4
+
+wire c0_u1 u1
+wire c0_u4 u4
+wire c1_u4 u4
+wire c2_u4 u4
+wire c4_u4 u4
+wire c8_u4 u4
+
+wire c0_u2 u2
+wire c1_u2 u2
+wire c2_u2 u2
+wire c3_u2 u2
+
+comb c0_u1 const 0
+comb c0_u4 const 0
+comb c1_u4 const 1
+comb c2_u4 const 2
+comb c4_u4 const 4
+comb c8_u4 const 8
+
+comb c0_u2 const 0
+comb c1_u2 const 1
+comb c2_u2 const 2
+comb c3_u2 const 3
+
+wire r0 u1
+wire r1 u1
+wire r2 u1
+wire r3 u1
+comb r0 slice req 0 0
+comb r1 slice req 1 1
+comb r2 slice req 2 2
+comb r3 slice req 3 3
+
+# Priority 0 selection: 0 -> 1 -> 2 -> 3
+wire g_p0_3 u4
+wire g_p0_2 u4
+wire g_p0_1 u4
+wire g_p0 u4
+comb g_p0_3 mux r3 c8_u4 c0_u4
+comb g_p0_2 mux r2 c4_u4 g_p0_3
+comb g_p0_1 mux r1 c2_u4 g_p0_2
+comb g_p0 mux r0 c1_u4 g_p0_1
+
+# Priority 1 selection: 1 -> 2 -> 3 -> 0
+wire g_p1_0 u4
+wire g_p1_3 u4
+wire g_p1_2 u4
+wire g_p1 u4
+comb g_p1_0 mux r0 c1_u4 c0_u4
+comb g_p1_3 mux r3 c8_u4 g_p1_0
+comb g_p1_2 mux r2 c4_u4 g_p1_3
+comb g_p1 mux r1 c2_u4 g_p1_2
+
+# Priority 2 selection: 2 -> 3 -> 0 -> 1
+wire g_p2_1 u4
+wire g_p2_0 u4
+wire g_p2_3 u4
+wire g_p2 u4
+comb g_p2_1 mux r1 c2_u4 c0_u4
+comb g_p2_0 mux r0 c1_u4 g_p2_1
+comb g_p2_3 mux r3 c8_u4 g_p2_0
+comb g_p2 mux r2 c4_u4 g_p2_3
+
+# Priority 3 selection: 3 -> 0 -> 1 -> 2
+wire g_p3_2 u4
+wire g_p3_1 u4
+wire g_p3_0 u4
+wire g_p3 u4
+comb g_p3_2 mux r2 c4_u4 c0_u4
+comb g_p3_1 mux r1 c2_u4 g_p3_2
+comb g_p3_0 mux r0 c1_u4 g_p3_1
+comb g_p3 mux r3 c8_u4 g_p3_0
+
+# State registers
+wire prio u2
+wire locked u1
+wire locked_grant u4
+
+# Select new grant based on prio
+wire p_bit0 u1
+wire p_bit1 u1
+comb p_bit0 slice prio 0 0
+comb p_bit1 slice prio 1 1
+
+wire g_p01 u4
+wire g_p23 u4
+wire new_grant u4
+comb g_p01 mux p_bit0 g_p1 g_p0
+comb g_p23 mux p_bit0 g_p3 g_p2
+comb new_grant mux p_bit1 g_p23 g_p01
+
+# Effective grant before rst suppression
+wire raw_grant u4
+comb raw_grant mux locked locked_grant new_grant
+
+wire raw_valid u1
+comb raw_valid ne raw_grant c0_u4
+
+# Suppress valid and grant while rst is high
+comb grant mux rst c0_u4 raw_grant
+comb valid mux rst c0_u1 raw_valid
+
+# Transfer and stall detection
+wire transfer u1
+comb transfer and valid ready
+
+# Next prio after transfer: granted index + 1 mod 4
+# If grant[0] (1) -> next prio 1
+# If grant[1] (2) -> next prio 2
+# If grant[2] (4) -> next prio 3
+# If grant[3] (8) -> next prio 0
+wire g0 u1
+wire g1 u1
+wire g2 u1
+comb g0 slice raw_grant 0 0
+comb g1 slice raw_grant 1 1
+comb g2 slice raw_grant 2 2
+
+wire np_2 u2
+wire np_1 u2
+wire granted_next_prio u2
+comb np_2 mux g2 c3_u2 c0_u2
+comb np_1 mux g1 c2_u2 np_2
+comb granted_next_prio mux g0 c1_u2 np_1
+
+wire next_prio u2
+comb next_prio mux transfer granted_next_prio prio
+sync prio clk rst next_prio 0
+
+# Next locked state: locked if valid and not ready
+wire not_ready u1
+wire c1_u1 u1
+comb c1_u1 const 1
+comb not_ready xor ready c1_u1
+
+wire next_locked u1
+comb next_locked and raw_valid not_ready
+sync locked clk rst next_locked 0
+
+# Next locked_grant
+wire next_locked_grant u4
+comb next_locked_grant copy raw_grant
+sync locked_grant clk rst next_locked_grant 0
+
+end

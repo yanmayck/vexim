@@ -1,0 +1,223 @@
+module mem_controller
+input clk u1
+input rst u1
+input cmd_valid u1
+input cmd_write u1
+input cmd_addr u40
+input cmd_beats u8
+input w_valid u1
+input w_data u64
+input w_strb u8
+input r_ready u1
+input mem_ready u1
+input mem_w_ready u1
+input mem_r_valid u1
+input mem_r_data u64
+output cmd_ready u1
+output w_ready u1
+output r_valid u1
+output r_data u64
+output r_last u1
+output mem_valid u1
+output mem_write u1
+output mem_addr u40
+output mem_beats u8
+output mem_w_valid u1
+output mem_w_data u64
+output mem_w_strb u8
+output mem_r_ready u1
+output done u1
+
+# Constants
+wire c0_1 u1
+wire c0_2 u2
+wire c1_2 u2
+wire c2_2 u2
+wire c1_8 u8
+wire c16_8 u8
+
+comb c0_1 const 0
+comb c0_2 const 0
+comb c1_2 const 1
+comb c2_2 const 2
+comb c1_8 const 1
+comb c16_8 const 16
+
+# State machine
+# 0 = IDLE, 1 = DESC, 2 = DATA
+wire state u2
+wire next_state u2
+
+wire is_write_reg u1
+wire next_is_write u1
+
+wire addr_reg u40
+wire next_addr u40
+
+wire rem_beats_reg u8
+wire next_rem_beats u8
+
+wire cur_beats_reg u8
+wire next_cur_beats u8
+
+wire desc_beats_reg u8
+wire next_desc_beats u8
+
+# State decodes
+wire is_idle u1
+wire is_desc u1
+wire is_data u1
+wire not_rst u1
+
+comb is_idle eq state c0_2
+comb is_desc eq state c1_2
+comb is_data eq state c2_2
+comb not_rst eq rst c0_1
+
+# Compute descriptor beats from addr_reg and rem_beats_reg
+wire addr_hi5 u5
+wire c31_5 u5
+wire near_4k u1
+wire addr_mid4 u4
+wire addr_mid4_z8 u8
+wire diff_4k u8
+wire max_16_or_4k u8
+
+comb addr_hi5 slice addr_reg 11 7
+comb c31_5 const 31
+comb near_4k eq addr_hi5 c31_5
+comb addr_mid4 slice addr_reg 6 3
+comb addr_mid4_z8 zext addr_mid4
+comb diff_4k sub c16_8 addr_mid4_z8
+comb max_16_or_4k mux near_4k diff_4k c16_8
+
+wire rem_z9 u9
+wire max_z9 u9
+wire unused_sub_rem_max u9
+wire rem_lt_max u1
+wire calc_beats u8
+
+comb rem_z9 zext rem_beats_reg
+comb max_z9 zext max_16_or_4k
+comb unused_sub_rem_max sub rem_z9 max_z9
+comb rem_lt_max slice unused_sub_rem_max 8 8
+comb calc_beats mux rem_lt_max rem_beats_reg max_16_or_4k
+
+# Handshake signals
+wire cmd_ready_raw u1
+comb cmd_ready and is_idle not_rst
+comb cmd_ready_raw copy cmd_ready
+wire cmd_fire u1
+comb cmd_fire and cmd_valid cmd_ready_raw
+
+comb mem_valid and is_desc not_rst
+comb mem_write copy is_write_reg
+comb mem_addr copy addr_reg
+comb mem_beats copy calc_beats
+
+wire desc_fire u1
+wire mem_valid_raw u1
+comb mem_valid_raw and is_desc not_rst
+comb desc_fire and mem_valid_raw mem_ready
+
+# Data phase gating
+wire is_data_active u1
+comb is_data_active and is_data not_rst
+
+wire is_write_data u1
+wire is_read_data u1
+wire not_is_write u1
+comb not_is_write eq is_write_reg c0_1
+comb is_write_data and is_data_active is_write_reg
+comb is_read_data and is_data_active not_is_write
+
+# Pass-through write channel during write DATA state
+comb mem_w_valid and is_write_data w_valid
+comb w_ready and is_write_data mem_w_ready
+comb mem_w_data copy w_data
+comb mem_w_strb copy w_strb
+
+wire w_fire u1
+comb w_fire and mem_w_valid mem_w_ready
+
+# Pass-through read channel during read DATA state
+comb r_valid and is_read_data mem_r_valid
+comb mem_r_ready and is_read_data r_ready
+comb r_data copy mem_r_data
+
+wire r_fire u1
+comb r_fire and r_valid r_ready
+
+wire beat_fire u1
+comb beat_fire or w_fire r_fire
+
+# Last beat checks
+wire last_desc_beat u1
+comb last_desc_beat eq cur_beats_reg c1_8
+
+wire last_cmd_beat u1
+comb last_cmd_beat eq rem_beats_reg c1_8
+
+wire r_last_cond u1
+comb r_last_cond and r_valid last_cmd_beat
+comb r_last copy r_last_cond
+
+comb done and beat_fire last_cmd_beat
+
+# Next state logic
+wire state_from_idle u2
+comb state_from_idle mux cmd_fire c1_2 c0_2
+
+wire state_from_desc u2
+comb state_from_desc mux desc_fire c2_2 c1_2
+
+wire desc_done u1
+comb desc_done and beat_fire last_desc_beat
+wire state_after_desc_done u2
+comb state_after_desc_done mux last_cmd_beat c0_2 c1_2
+wire state_from_data u2
+comb state_from_data mux desc_done state_after_desc_done c2_2
+
+wire next_state_1 u2
+comb next_state_1 mux is_idle state_from_idle state
+wire next_state_2 u2
+comb next_state_2 mux is_desc state_from_desc next_state_1
+comb next_state mux is_data state_from_data next_state_2
+
+# Next register values
+comb next_is_write mux cmd_fire cmd_write is_write_reg
+comb next_desc_beats mux desc_fire calc_beats desc_beats_reg
+
+wire cur_beats_dec u8
+comb cur_beats_dec sub cur_beats_reg c1_8
+wire cur_beats_after_data u8
+comb cur_beats_after_data mux beat_fire cur_beats_dec cur_beats_reg
+comb next_cur_beats mux desc_fire calc_beats cur_beats_after_data
+
+wire rem_beats_dec u8
+comb rem_beats_dec sub rem_beats_reg c1_8
+wire rem_beats_after_data u8
+comb rem_beats_after_data mux beat_fire rem_beats_dec rem_beats_reg
+comb next_rem_beats mux cmd_fire cmd_beats rem_beats_after_data
+
+wire c0_3 u3
+comb c0_3 const 0
+wire desc_beats_bytes u11
+comb desc_beats_bytes concat desc_beats_reg c0_3
+wire desc_beats_bytes_z40 u40
+comb desc_beats_bytes_z40 zext desc_beats_bytes
+wire addr_inc u40
+comb addr_inc add addr_reg desc_beats_bytes_z40
+wire addr_after_data u40
+comb addr_after_data mux desc_done addr_inc addr_reg
+comb next_addr mux cmd_fire cmd_addr addr_after_data
+
+# Registers
+sync state clk rst next_state 0
+sync is_write_reg clk rst next_is_write 0
+sync addr_reg clk rst next_addr 0
+sync rem_beats_reg clk rst next_rem_beats 0
+sync cur_beats_reg clk rst next_cur_beats 0
+sync desc_beats_reg clk rst next_desc_beats 0
+
+end
