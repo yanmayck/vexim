@@ -17,7 +17,7 @@ A combinational driver has the form `comb DEST OP OPERANDS`. Each destination is
 | `const VALUE` | Unsigned decimal integer from 0 through 2^N − 1 for a destination of width N. |
 | `copy SRC` | Value of a signal with the same width as the destination. |
 | `zext SRC` | Value of a strictly narrower signal padded with zeros at the high end. |
-| `add A B`, `sub A B` | Addition or subtraction modulo 2^N. Both operands have destination width N. |
+| `add A B`, `sub A B`, `mul A B` | Addition, subtraction, or multiplication modulo 2^N. Both operands have destination width N. |
 | `and A B`, `or A B`, `xor A B` | Bitwise operation. Both operands have destination width. |
 | `slice SRC MSB LSB` | Inclusive range with zero-based indices. Both indices must be within the source, with MSB ≥ LSB. The destination width is MSB − LSB + 1. |
 | `concat A B` | Joins signals with `A` in the high bits. The destination width is the sum of both widths. |

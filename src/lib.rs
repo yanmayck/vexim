@@ -365,6 +365,7 @@ pub fn parse_with_parameters(
                 let symbol = match *op {
                     "add" => "+",
                     "sub" => "-",
+                    "mul" => "*",
                     "and" => "&",
                     "or" => "|",
                     "xor" => "^",
