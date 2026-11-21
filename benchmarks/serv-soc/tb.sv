@@ -5,6 +5,11 @@ module tb;
     reg [7:0] tx_byte;
     reg uart_seen=0;
     integer contention=0, spi_bits=0, cycles=0;
+    reg previous_dma=0;
+    reg [31:0] previous_timer=0;
+`ifdef COMPACT_SOC
+    integer serial_stalls=0;
+`endif
     serv_soc dut(.clk(clk), .rst(rst), .spi_miso(spi_mosi), .spi_mosi(spi_mosi),
                  .spi_sck(spi_sck), .spi_cs_n(spi_cs_n), .uart_tx(uart_tx),
                  .signature(signature));
@@ -36,12 +41,26 @@ module tb;
 
     always @(posedge clk) begin
         cycles=cycles+1;
+        if (!rst && previous_dma && dut.timer_count !== previous_timer + 32'd1)
+            $fatal(1,"timer must advance while DMA is active");
+        previous_dma=!rst && dut.dma_busy;
+        previous_timer=dut.timer_count;
+`ifdef COMPACT_SOC
+        if (!rst && dut.dcyc && dut.wait_serial) serial_stalls=serial_stalls+1;
+        if (!rst && dut.uart_busy && dut.spi_busy)
+            $fatal(1,"shared serial resource granted to two peripherals");
+`endif
         if(!rst && dut.request && dut.dcyc && dut.dma_busy)
             contention=contention+1;
         if(signature===32'hffffffff) $fatal(1,"boot program verification failed");
         if(signature===32'h5a) begin
             if(!uart_seen || spi_bits!=8 || contention==0)
                 $fatal(1,"missing UART/SPI/contention: %b %d %d",uart_seen,spi_bits,contention);
+`ifdef COMPACT_SOC
+            if ($test$plusargs("require_serial_wait") && serial_stalls==0)
+                $fatal(1,"serial contention test did not stall");
+            $display("Serial arbitration wait cycles: %0d",serial_stalls);
+`endif
             $display("PASS boot=%0d cycles, DMA contention=%0d, UART=%h, SPI=%0d bits",
                      cycles, contention, tx_byte, spi_bits);
             $finish;

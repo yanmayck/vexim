@@ -191,3 +191,51 @@ Yosys proved equivalence and mapped both versions of that fixture to
 and area-optimized compiler emitted byte-identical SystemVerilog.
 The whole-SoC area reductions in this table come from the peripheral
 rewrite and choice of memory backend.
+
+## UP5K V5 with shared UART and SPI
+
+The compact firmware profile shares a transmit shift register, bit counter,
+and divider between UART and SPI. A CPU transmit write waits while the
+engine is busy. The original boot required two wait cycles and finished
+in the same 17,199 cycles as the V4 control. A second firmware places the
+writes next to each other and checks that the serial overlap causes
+observable backpressure. It waited 13 cycles and again passed the UART
+and SPI checks. The SPI receive register is read after busy clears.
+
+MMIO uses one page/alignment guard and a low-offset decoder. The compact
+profile retains DMA busy, timer count, SPI busy and SPI receive readback.
+DMA configuration, timer configuration, UART status and signature
+readbacks are omitted. The corresponding writes and signature pin remain.
+The timer advances while DMA runs, which the boot bench asserts. The two
+units keep separate arithmetic. DMA endpoint range checks instead use
+the boundary bit and a lower-bit reduction.
+
+| Metric | V4 EBR control, current checkout | V5 compact |
+|---|---:|---:|
+| Mapped LUT4s | 876 | 757 |
+| Packed logic cells | 1,176 | 1,055 |
+| Logic cells free | 77.73% | 80.02% |
+| EBR / SPRAM blocks used | 2 / 2 | 1 / 2 |
+| Median Fmax, five seeds | 26.29 MHz | 28.12 MHz |
+| Seeds meeting 50 MHz | 0/5 | 0/5 |
+
+The DMA boundary-check rewrite is shared by both entries in this table.
+Yosys also proved it equivalent to the previous DMA. The compact build
+is one packed cell below the 1,056-cell threshold.
+
+The runner saves `stat -top serv_soc` and groups mapped LUT4s by their
+flattened names. Names indicate where the mapper attached each cell.
+Cross-module packing and shared hardware limit attribution to individual
+functions.
+
+| Mapped LUT4 name group | V4 EBR control | V5 compact |
+|---|---:|---:|
+| SERV | 276 | 278 |
+| Bus and DMA | 182 | 172 |
+| Timer-prefixed peripheral logic | 208 | 65 |
+| Serial and other peripheral logic | 58 | 40 |
+| Top-level, MMIO and remaining logic | 152 | 202 |
+| Total | 876 | 757 |
+
+Use `--v5` in the UP5K command and a fresh output directory. Compare
+against `--v4-ebr` from the same checkout for these paired results.

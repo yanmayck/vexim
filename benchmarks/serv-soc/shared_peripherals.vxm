@@ -1,0 +1,183 @@
+module soc_peripherals
+input clk u1
+input rst u1
+input uart_start u1
+input spi_start u1
+input timer_set_compare u1
+input timer_set_enable u1
+input data u32
+input spi_miso u1
+input uart_byte u8
+output uart_load u1
+output uart_tx u1
+output uart_busy u1
+output spi_busy u1
+output spi_cs_n u1
+output spi_mosi u1
+output spi_sck u1
+output spi_rx u8
+output timer_count u32
+output timer_compare u32
+output timer_enable u1
+output timer_irq u1
+wire one u1
+comb one const 1
+wire zero u1
+comb zero const 0
+wire zero3 u3
+comb zero3 const 0
+wire one3 u3
+comb one3 const 1
+wire zero4 u4
+comb zero4 const 0
+wire one4 u4
+comb one4 const 1
+wire one32 u32
+comb one32 const 1
+wire eight u4
+comb eight const 8
+wire ten u4
+comb ten const 10
+wire div_max u3
+comb div_max const 7
+
+# One transmit shifter, bit counter and divider for both protocols.
+wire left u4
+wire mode_spi u1
+wire divider u3
+wire shift u8
+wire idle u1
+comb idle eq left zero4
+wire busy u1
+comb busy xor idle one
+wire mode_uart u1
+comb mode_uart xor mode_spi one
+wire start_any u1
+comb start_any or uart_start spi_start
+wire load u1
+comb load and idle start_any
+wire phase u1
+comb phase slice divider 0 0
+wire phase_low u1
+comb phase_low xor phase one
+wire uart_end u1
+comb uart_end eq divider div_max
+wire protocol_end u1
+comb protocol_end mux mode_spi phase uart_end
+wire step_bit u1
+comb step_bit and busy protocol_end
+wire left_dec u4
+comb left_dec sub left one4
+wire left_run u4
+comb left_run mux step_bit left_dec left
+wire load_length u4
+comb load_length mux spi_start eight ten
+wire div_inc u3
+comb div_inc add divider one3
+wire div_run u3
+comb div_run mux busy div_inc zero3
+wire is_start_bit u1
+comb is_start_bit eq left ten
+wire is_stop_bit u1
+comb is_stop_bit eq left one4
+wire shift_allowed u1
+comb shift_allowed xor is_start_bit one
+wire do_shift u1
+comb do_shift and step_bit shift_allowed
+wire shift_tail u7
+comb shift_tail slice shift 7 1
+wire shift_next_bit u8
+comb shift_next_bit concat zero shift_tail
+wire shift_run u8
+comb shift_run mux do_shift shift_next_bit shift
+wire serial_bit u1
+comb serial_bit slice shift 0 0
+wire uart_data u1
+comb uart_data mux is_start_bit zero serial_bit
+wire uart_value u1
+comb uart_value or is_stop_bit uart_data
+wire spi_sample u1
+comb spi_sample and spi_busy phase_low
+wire rx_tail u7
+comb rx_tail slice spi_rx 6 0
+wire rx_shifted u8
+comb rx_shifted concat rx_tail spi_miso
+wire rx_run u8
+comb rx_run mux spi_sample rx_shifted spi_rx
+wire byte_in u8
+comb byte_in slice data 7 0
+wire input_bit0 u1
+comb input_bit0 slice byte_in 0 0
+wire input_bit1 u1
+comb input_bit1 slice byte_in 1 1
+wire input_bit2 u1
+comb input_bit2 slice byte_in 2 2
+wire input_bit3 u1
+comb input_bit3 slice byte_in 3 3
+wire input_bit4 u1
+comb input_bit4 slice byte_in 4 4
+wire input_bit5 u1
+comb input_bit5 slice byte_in 5 5
+wire input_bit6 u1
+comb input_bit6 slice byte_in 6 6
+wire input_bit7 u1
+comb input_bit7 slice byte_in 7 7
+wire reverse1 u2
+comb reverse1 concat input_bit0 input_bit1
+wire reverse2 u3
+comb reverse2 concat reverse1 input_bit2
+wire reverse3 u4
+comb reverse3 concat reverse2 input_bit3
+wire reverse4 u5
+comb reverse4 concat reverse3 input_bit4
+wire reverse5 u6
+comb reverse5 concat reverse4 input_bit5
+wire reverse6 u7
+comb reverse6 concat reverse5 input_bit6
+wire reverse7 u8
+comb reverse7 concat reverse6 input_bit7
+wire load_byte u8
+comb load_byte mux spi_start reverse7 byte_in
+comb uart_load and uart_start idle
+comb uart_busy and busy mode_uart
+comb spi_busy and busy mode_spi
+comb uart_tx mux uart_busy uart_value one
+comb spi_cs_n xor spi_busy one
+comb spi_sck and spi_busy phase
+comb spi_mosi and spi_busy serial_bit
+wire left_next u4
+comb left_next mux load load_length left_run
+sync left clk rst left_next 0
+wire mode_spi_next u1
+comb mode_spi_next mux load spi_start mode_spi
+sync mode_spi clk rst mode_spi_next 0
+sync divider clk rst div_run 0
+wire shift_next u8
+comb shift_next mux load load_byte shift_run
+sync shift clk rst shift_next 0
+# Eight samples overwrite every receive bit. Software reads after busy clears.
+sync spi_rx clk rst rx_run 0
+# Timer retains the 32-bit memory-mapped counter and compare registers.
+wire enable_bit u1
+comb enable_bit slice data 0 0
+wire timer_count_next u32
+comb timer_count_next add timer_count one32
+sync timer_count clk rst timer_count_next 0
+wire timer_compare_next u32
+comb timer_compare_next mux timer_set_compare data timer_compare
+sync timer_compare clk rst timer_compare_next 0
+wire timer_enable_next u1
+comb timer_enable_next mux timer_set_enable enable_bit timer_enable
+sync timer_enable clk rst timer_enable_next 0
+wire timer_wide u33
+comb timer_wide zext timer_count
+wire compare_wide u33
+comb compare_wide zext timer_compare
+wire compare_diff u33
+comb compare_diff sub timer_wide compare_wide
+wire borrow u1
+comb borrow slice compare_diff 32 32
+wire reached u1
+comb reached xor borrow one
+comb timer_irq and timer_enable reached
+end

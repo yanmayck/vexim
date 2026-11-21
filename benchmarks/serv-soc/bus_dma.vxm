@@ -40,8 +40,8 @@ wire one12 u12
 comb one12 const 1
 wire one13 u13
 comb one13 const 1
-wire limit u14
-comb limit const 4096
+wire zero12 u12
+comb zero12 const 0
 wire full u4
 comb full const 15
 wire last_dma u1
@@ -126,10 +126,18 @@ wire src_wide u14
 comb src_wide zext src_word
 wire src_end_pos u14
 comb src_end_pos add src_wide len_wide
-wire src_margin u14
-comb src_margin sub limit src_end_pos
+wire src_far_high u1
+comb src_far_high slice src_end_pos 13 13
+wire src_at_boundary u1
+comb src_at_boundary slice src_end_pos 12 12
+wire src_tail u12
+comb src_tail slice src_end_pos 11 0
+wire src_beyond_boundary u1
+comb src_beyond_boundary ne src_tail zero12
+wire src_far_low u1
+comb src_far_low and src_at_boundary src_beyond_boundary
 wire src_too_far u1
-comb src_too_far slice src_margin 13 13
+comb src_too_far or src_far_high src_far_low
 wire src_room u1
 comb src_room xor src_too_far one
 wire src_valid u1
@@ -150,10 +158,18 @@ wire dst_wide u14
 comb dst_wide zext dst_word
 wire dst_end_pos u14
 comb dst_end_pos add dst_wide len_wide
-wire dst_margin u14
-comb dst_margin sub limit dst_end_pos
+wire dst_far_high u1
+comb dst_far_high slice dst_end_pos 13 13
+wire dst_at_boundary u1
+comb dst_at_boundary slice dst_end_pos 12 12
+wire dst_tail u12
+comb dst_tail slice dst_end_pos 11 0
+wire dst_beyond_boundary u1
+comb dst_beyond_boundary ne dst_tail zero12
+wire dst_far_low u1
+comb dst_far_low and dst_at_boundary dst_beyond_boundary
 wire dst_too_far u1
-comb dst_too_far slice dst_margin 13 13
+comb dst_too_far or dst_far_high dst_far_low
 wire dst_room u1
 comb dst_room xor dst_too_far one
 wire dst_valid u1

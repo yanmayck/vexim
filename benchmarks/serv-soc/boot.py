@@ -2,7 +2,7 @@
 from pathlib import Path
 
 
-def boot_rom(path):
+def boot_rom(path, *, serial_overlap=False):
     program = []
     labels = {}
 
@@ -52,9 +52,15 @@ def boot_rom(path):
     add(4, 4, -1)
     branch(4, 0, "verify", True)
     add(8, 0, 0x56)
-    store(8, 1, 16)
-    add(8, 0, 0xa6)
-    store(8, 1, 36)
+    if serial_overlap:
+        add(10, 0, 0xa6)
+        store(8, 1, 16)
+        store(10, 1, 36)
+        add(8, 10, 0)
+    else:
+        store(8, 1, 16)
+        add(8, 0, 0xa6)
+        store(8, 1, 36)
     label("spi_wait")
     load(9, 1, 40)
     branch(9, 0, "spi_wait", True)

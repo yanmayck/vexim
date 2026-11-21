@@ -63,17 +63,29 @@ module serv_soc (
         end
     end
 
+`ifdef COMPACT_SOC
+    localparam [31:0] IO = 0;
+    wire [31:0] io_addr = daddr[31:6] == 26'h400000 && daddr[1:0] == 0
+        ? {26'd0, daddr[5:0]} : 32'hffffffff;
+    // Keep a valid UART/SPI write pending until the shared transmitter is idle.
+    wire wait_serial = dwe && dsel == 4'hf && (uart_busy || spi_busy) &&
+                       (io_addr == IO + 16 || io_addr == IO + 36);
+    wire cpu_bus_cycle = dcyc && !wait_serial;
+`else
     localparam [31:0] IO = 32'h10000000;
+    wire [31:0] io_addr = addr;
+    wire cpu_bus_cycle = dcyc;
+`endif
 `ifdef VEXIM_BUS_DMA
     wire [31:0] dma_src, dma_dst, addr, data;
     wire [15:0] dma_length;
     wire dma_busy, take_dma, request, wr;
     wire [3:0] mask;
     soc_bus_dma bus_dma (
-        .clk(clk), .rst(rst), .dcyc(dcyc), .dwe(dwe),
+        .clk(clk), .rst(rst), .dcyc(cpu_bus_cycle), .dwe(dwe),
         .daddr(daddr), .wdata(wdata), .dsel(dsel),
-        .set_src(io_write && addr == IO + 0), .set_dst(io_write && addr == IO + 4),
-        .set_len(io_write && addr == IO + 8), .start(io_write && addr == IO + 12),
+        .set_src(io_write && io_addr == IO + 0), .set_dst(io_write && io_addr == IO + 4),
+        .set_len(io_write && io_addr == IO + 8), .start(io_write && io_addr == IO + 12),
         .sram_read(sram_read), .dack(dack), .dma_ack(dma_ack), .dma_busy(dma_busy),
         .take_dma(take_dma), .request(request), .addr(addr), .data(data),
         .mask(mask), .wr(wr), .dma_src(dma_src), .dma_dst(dma_dst), .dma_length(dma_length)
@@ -95,7 +107,11 @@ module serv_soc (
     wire [3:0] mask = take_dma ? 4'hf : dsel;
     wire wr = take_dma ? dma_state == WRITE_WORD : dwe;
 `endif
+`ifdef COMPACT_SOC
+    wire in_sram = take_dma || daddr[31:14] == 0;
+`else
     wire in_sram = addr[31:14] == 0;
+`endif
     wire [11:0] word_index = addr[13:2];
     wire io_write = request && !take_dma && wr && mask == 4'hf;
 
@@ -117,16 +133,18 @@ module serv_soc (
     wire [7:0] spi_rx, uart_byte;
     soc_peripherals peripherals (
         .clk(clk), .rst(rst), .data(data), .spi_miso(spi_miso),
-        .uart_start(io_write && addr == IO + 16),
-        .spi_start(io_write && addr == IO + 36),
-        .timer_set_compare(io_write && addr == IO + 28),
-        .timer_set_enable(io_write && addr == IO + 32),
+        .uart_start(io_write && io_addr == IO + 16),
+        .spi_start(io_write && io_addr == IO + 36),
+        .timer_set_compare(io_write && io_addr == IO + 28),
+        .timer_set_enable(io_write && io_addr == IO + 32),
         .uart_byte(uart_byte), .uart_load(uart_load), .uart_tx(uart_tx), .uart_busy(uart_busy),
         .spi_busy(spi_busy), .spi_cs_n(spi_cs_n), .spi_mosi(spi_mosi),
         .spi_sck(spi_sck), .spi_rx(spi_rx), .timer_count(timer_count),
         .timer_compare(timer_compare), .timer_enable(timer_enable), .timer_irq(timer_irq)
     );
-`ifdef UART_EBR
+`ifdef COMPACT_SOC
+    assign uart_byte = 8'd0;
+`elsif UART_EBR
     wire [15:0] uart_ebr_data;
     SB_RAM40_4K uart_buffer (
         .RDATA(uart_ebr_data), .RCLK(clk), .RCLKE(uart_busy), .RE(1'b1),
@@ -157,18 +175,32 @@ module serv_soc (
 
     reg [31:0] read_value;
     always @* begin
-        case (addr)
+        case (io_addr)
+`ifndef COMPACT_SOC
             IO + 0: read_value = dma_src;
+`endif
+`ifndef COMPACT_SOC
             IO + 4: read_value = dma_dst;
+`endif
+`ifndef COMPACT_SOC
             IO + 8: read_value = {16'b0, dma_length};
+`endif
             IO + 12: read_value = {31'b0, dma_busy};
+`ifndef COMPACT_SOC
             IO + 20: read_value = {31'b0, uart_busy};
+`endif
             IO + 24: read_value = timer_count;
+`ifndef COMPACT_SOC
             IO + 28: read_value = timer_compare;
+`endif
+`ifndef COMPACT_SOC
             IO + 32: read_value = {31'b0, timer_enable};
+`endif
             IO + 40: read_value = {31'b0, spi_busy};
             IO + 44: read_value = {24'b0, spi_rx};
+`ifndef COMPACT_SOC
             IO + 48: read_value = signature;
+`endif
             default: read_value = 0;
         endcase
     end
@@ -260,7 +292,7 @@ module serv_soc (
             end
 `endif
             if (io_write) begin
-                case (addr)
+                case (io_addr)
 `ifndef VEXIM_BUS_DMA
                     IO + 0: if (!dma_busy) dma_src <= data;
                     IO + 4: if (!dma_busy) dma_dst <= data;
