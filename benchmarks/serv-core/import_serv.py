@@ -70,6 +70,26 @@ def translate(module, *, name="serv_rf_vex", source="the pinned ISC-licensed SER
                 for index, output in enumerate(ports["RD_DATA"][start:start + width]):
                     comb(bit(output), 1, f"slice {read} {index} {index}")
             lines.append(f"write {name} {args['WR_CLK']} {args['WR_EN']} {wr_addr} {data}")
+        elif kind in {"$add", "$sub"}:
+            params = cell["parameters"]
+            width = int(params["Y_WIDTH"], 2)
+            if not 1 <= width <= 64:
+                raise ValueError(f"{kind} result width {width} is outside Vexim's range")
+            signed = all(int(params[f"{name}_SIGNED"], 2) for name in ("A", "B"))
+            operands = []
+            for name in ("A", "B"):
+                bits = ports[name][:width]
+                value = pack(bits, f"arith{i}_{name}")
+                if len(bits) < width:
+                    if signed:
+                        value = pack(bits + [bits[-1]] * (width - len(bits)), f"arith{i}_{name}_sign")
+                    else:
+                        value = comb(f"arith{i}_{name}_wide", width, f"zext {value}")
+                operands.append(value)
+            op = "add" if kind == "$add" else "sub"
+            result = comb(f"arith{i}_result", width, f"{op} {' '.join(operands)}")
+            for index, output in enumerate(ports["Y"]):
+                comb(bit(output), 1, f"slice {result} {index} {index}")
         elif kind in {"$_AND_", "$_OR_", "$_XOR_", "$_NOT_", "$_MUX_"}:
             if kind == "$_MUX_":
                 expression = f"mux {args['S']} {args['B']} {args['A']}"

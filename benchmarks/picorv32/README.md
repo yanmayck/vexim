@@ -56,3 +56,21 @@ docker run --rm --network none --mount "type=bind,source=$((Get-Location).Path)/
 The importer checks the pinned source hash. The output includes the
 generated `pico.vxm`, emitted SystemVerilog, traces, license and
 `results.json`.
+
+## Word-level arithmetic import
+
+Append `--word` to the Docker command and mount a separate output
+directory. This excludes RTLIL adders and subtractors from the early
+`techmap`. The importer writes width-matched Vexim arithmetic and
+handles widening and truncation explicitly.
+
+| ECP5 flow | Gate-level import LUT4s | Word-level import LUT4s | Gate-level / word-level CCU2C |
+|---|---:|---:|---:|
+| Intermediate directly | 3,476 | 2,665 | 0 / 242 |
+| Vexim round trip | 3,597 | 2,782 | 0 / 242 |
+
+The original RTL remains at 2,479 LUT4s and 371 CCU2C. The word-level
+run preserves 39 additions and six subtractions. It compiles 23,615
+Vexim lines in about 67 ms and matches the official CPU's 41 bus
+transactions for each of the three seeds, with identical cycle counts.
+These are synthesis and simulation measurements.

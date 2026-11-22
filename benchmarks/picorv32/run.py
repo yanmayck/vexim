@@ -1,4 +1,5 @@
 """Reconstruct a pinned PicoRV32 IM profile, run firmware, and measure area."""
+import argparse
 import hashlib
 import json
 import subprocess
@@ -30,12 +31,16 @@ def yosys(script, name):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--word", action="store_true", help="Preserve word-level add and sub cells")
+    args = parser.parse_args()
     upstream = Path("/rtl/picorv32.v")
     verify = json.loads((HERE / "upstream.json").read_text())
     if hashlib.sha256(upstream.read_bytes().replace(b"\r\n", b"\n")).hexdigest() != verify["sha256_lf"]:
         raise ValueError("source does not match the pinned PicoRV32 revision")
+    mapping = "techmap t:$add t:$sub %u %n" if args.word else "techmap"
     yosys(f"read_verilog {upstream}; hierarchy -top {TOP} {DEFINES}; "
-          "proc; flatten; opt; memory -nomap -nordff; techmap; opt; write_json coarse.json",
+          f"proc; flatten; opt; memory -nomap -nordff; {mapping}; opt; write_json coarse.json",
           "extract")
     module = json.loads((OUT / "coarse.json").read_text())["modules"][TOP]
     source = translate(module, name=CORE, source="pinned ISC-licensed PicoRV32 RTL")
@@ -56,7 +61,9 @@ def main():
     with path.open("a") as file:
         file.write(f"\nmodule {TOP}({', '.join(ports)});\n"
                    f"  {CORE} cpu({', '.join(wiring)});\nendmodule\n")
+    arithmetic = Counter(cell["type"] for cell in module["cells"].values())
     results = {"vexim_lines": len(source.splitlines()), "compile_seconds": compile_seconds,
+               "word_cells": {name: arithmetic[name] for name in ("$add", "$sub")},
                "seeds": {}, "ecp5": {}}
 
     for label, design, definitions in (("official", str(upstream), ["-DOFFICIAL"]),
