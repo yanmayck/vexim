@@ -47,18 +47,22 @@ def route(harness, label, seed, timeout):
         return {"seed": seed, "error": f"nextpnr exited with status {error.returncode}"}
 
 
-def simulate(compiler, n):
+def simulate(compiler, n, registered=False):
     output = OUTPUT / str(n)
     output.mkdir(exist_ok=True)
-    source = HERE / "switch.vxm"
-    vexim = output / "vexim.sv"
+    label = "registered" if registered else "vexim"
+    source = HERE / ("switch_registered.vxm" if registered else "switch.vxm")
+    vexim = output / f"{label}.sv"
     compiler_seconds = command([str(compiler), "build", str(source),
                                 "--param", f"PORTS={n}", "-o", str(vexim)],
                                output / "compiler.log")
-    reference = output / "systemverilog.sv"
-    reference.write_text((HERE / "reference.sv").read_text() + "\n" + reference_wrapper(n))
+    if registered:
+        designs = {label: vexim}
+    else:
+        reference = output / "systemverilog.sv"
+        reference.write_text((HERE / "reference.sv").read_text() + "\n" + reference_wrapper(n))
+        designs = {"systemverilog": reference, label: vexim}
     traffic = make_test(n, output)
-    designs = {"systemverilog": reference, "vexim": vexim}
     for label, design in designs.items():
         executable = output / f"{label}.sim"
         command(["iverilog", "-g2012", "-s", "tb", "-o", str(executable),
@@ -87,15 +91,20 @@ def summarize(runs, traffic):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--physical-ports", type=int, choices=(4, 8), default=4)
+    parser.add_argument("--registered", action="store_true", help="measure the registered Vexim switch only")
+    parser.add_argument("--seed", type=int, choices=range(1, 6), action="append",
+                        help="route only the selected seeds (default: all five)")
     args = parser.parse_args()
     physical = args.physical_ports
     timeout = 240 if physical == 8 else 120
+    seeds = dict.fromkeys(args.seed or range(1, 6))
     variants = f"variants_{physical}x{physical}"
     compiler = OUTPUT / "veximc"
     results = {"simulation": {}, variants: {}}
     harnesses = {}
-    for n in (2, 4, 8):
-        stats, designs = simulate(compiler, n)
+    sizes = (physical,) if args.registered else (2, 4, 8)
+    for n in sizes:
+        stats, designs = simulate(compiler, n, args.registered)
         results["simulation"][n] = stats
         if n != physical:
             continue
@@ -112,7 +121,8 @@ def main():
             print(n, label, dict(counts), flush=True)
 
     with ThreadPoolExecutor(max_workers=4) as pool:
-        jobs = {label: [pool.submit(route, harness, label, seed, timeout) for seed in range(1, 6)]
+        jobs = {label: [pool.submit(route, harness, label, seed, timeout)
+                        for seed in seeds]
                 for label, harness in harnesses.items()}
         for label, futures in jobs.items():
             runs = [job.result() for job in futures]

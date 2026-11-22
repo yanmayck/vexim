@@ -95,6 +95,30 @@ the same 240-second budget before completing routing. A routed Vexim
 critical path is therefore unavailable for evaluating a balanced
 arbiter or data selector.
 
+### Registering the egress grant
+
+`switch_registered.vxm` is an alternative with a one-hot grant
+registered at each egress. The scheduler reads the next-cycle FIFO
+valid bits, lock and round-robin cursor. This lets the grant be
+registered without inserting an idle cycle at packet boundaries.
+The data mux uses the registered grant. The original cycle-by-cycle
+oracle passes unchanged across all three 8x8 workloads.
+
+The registered implementation maps to 11,978 standalone LUT4,
+2,400 flip-flops and 64 BRAM blocks. Compared with the original
+Vexim implementation it adds 2,988 LUT4 (33.2%) and 64 flip-flops.
+The common timing harness packs into 13,036 combinational cells,
+up from 11,041 in the original Vexim run.
+
+Neither seed 2 nor seed 3 finished routing within 240 seconds with
+router2, matching the original Vexim outcome for those seeds. There
+is no post-route frequency or throughput estimate for this variant.
+The registered grant preserved simulated throughput but did not solve
+the routing problem and increased the mapped resource count.
+
+To reproduce the timing trial, use a fresh output directory as below
+and append `--physical-ports 8 --registered --seed 2 --seed 3`.
+
 ## Reproduce in PowerShell
 
 Run from the repository root. Build the `vexim-ecp5-tools` image as in

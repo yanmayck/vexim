@@ -1,0 +1,203 @@
+module packet_switch
+param PORTS 4
+# Each FIFO holds 64 beats.
+# The circular read and write pointers are six bits.
+input clk u1
+input rst u1
+wire zero1 u1
+comb zero1 const 0
+wire one1 u1
+comb one1 const 1
+wire oneptr u6
+comb oneptr const 1
+wire one4 u4
+comb one4 const 1
+wire zero4 u4
+comb zero4 const 0
+wire zero33 u33
+comb zero33 const 0
+wire running u1
+comb running xor rst one1
+generate I PORTS
+input in_valid${I} u1
+input in_dest${I} u4
+input in_data${I} u32
+input in_last${I} u1
+output in_ready${I} u1
+wire index${I} u4
+comb index${I} const ${I}
+wire after${I} u4
+comb after${I} const ${I+1}
+wire incoming${I} u33
+comb incoming${I} concat in_last${I} in_data${I}
+endgenerate
+generate O PORTS
+input out_ready${O} u1
+output out_valid${O} u1
+output out_data${O} u32
+output out_last${O} u1
+endgenerate
+
+# Each input and destination has an independent synchronous FIFO.
+generate I PORTS
+generate O PORTS
+wire match${I}_${O} u1
+comb match${I}_${O} eq in_dest${I} index${O}
+wire space${I}_${O} u1
+comb space${I}_${O} xor full${I}_${O} one1
+wire ready${I}_${O} u1
+comb ready${I}_${O} and match${I}_${O} space${I}_${O}
+wire push_ready${I}_${O} u1
+comb push_ready${I}_${O} and ready${I}_${O} in_valid${I}
+wire push${I}_${O} u1
+comb push${I}_${O} and push_ready${I}_${O} running
+wire pop${I}_${O} u1
+comb pop${I}_${O} and grant${I}_${O} pop_enable${O}
+wire r_inc${I}_${O} u6
+comb r_inc${I}_${O} add rp${I}_${O} oneptr
+wire w_inc${I}_${O} u6
+comb w_inc${I}_${O} add wp${I}_${O} oneptr
+wire rp${I}_${O} u6
+wire rp${I}_${O}_d u6
+comb rp${I}_${O}_d mux pop${I}_${O} r_inc${I}_${O} rp${I}_${O}
+sync rp${I}_${O} clk rst rp${I}_${O}_d
+wire wp${I}_${O} u6
+wire wp${I}_${O}_d u6
+comb wp${I}_${O}_d mux push${I}_${O} w_inc${I}_${O} wp${I}_${O}
+sync wp${I}_${O} clk rst wp${I}_${O}_d
+wire same_next${I}_${O} u1
+comb same_next${I}_${O} eq rp${I}_${O}_d wp${I}_${O}_d
+wire not_pop${I}_${O} u1
+comb not_pop${I}_${O} xor pop${I}_${O} one1
+wire push_only${I}_${O} u1
+comb push_only${I}_${O} and push${I}_${O} not_pop${I}_${O}
+wire not_push${I}_${O} u1
+comb not_push${I}_${O} xor push${I}_${O} one1
+wire pop_only${I}_${O} u1
+comb pop_only${I}_${O} and pop${I}_${O} not_push${I}_${O}
+wire full_candidate${I}_${O} u1
+comb full_candidate${I}_${O} and push_only${I}_${O} same_next${I}_${O}
+wire keep_full${I}_${O} u1
+comb keep_full${I}_${O} and full${I}_${O} not_pop${I}_${O}
+wire full${I}_${O} u1
+wire full${I}_${O}_d u1
+comb full${I}_${O}_d or full_candidate${I}_${O} keep_full${I}_${O}
+sync full${I}_${O} clk rst full${I}_${O}_d
+wire empty_candidate${I}_${O} u1
+comb empty_candidate${I}_${O} and pop_only${I}_${O} same_next${I}_${O}
+wire not_emptied${I}_${O} u1
+comb not_emptied${I}_${O} xor empty_candidate${I}_${O} one1
+wire keep_valid${I}_${O} u1
+comb keep_valid${I}_${O} and valid${I}_${O} not_emptied${I}_${O}
+wire valid${I}_${O} u1
+wire valid${I}_${O}_d u1
+comb valid${I}_${O}_d or push${I}_${O} keep_valid${I}_${O}
+sync valid${I}_${O} clk rst valid${I}_${O}_d
+mem fifo${I}_${O} u33 64
+write fifo${I}_${O} clk push${I}_${O} wp${I}_${O} incoming${I}
+wire ram${I}_${O} u33
+read_sync ram${I}_${O} fifo${I}_${O} clk rp${I}_${O}_d
+wire collision${I}_${O} u1
+comb collision${I}_${O} eq rp${I}_${O}_d wp${I}_${O}
+wire forward${I}_${O} u1
+wire forward${I}_${O}_d u1
+comb forward${I}_${O}_d and collision${I}_${O} push${I}_${O}
+sync forward${I}_${O} clk rst forward${I}_${O}_d
+wire copy_word${I}_${O} u33
+wire copy_word${I}_${O}_d u33
+comb copy_word${I}_${O}_d copy incoming${I}
+sync copy_word${I}_${O} clk rst copy_word${I}_${O}_d
+wire word${I}_${O} u33
+comb word${I}_${O} mux forward${I}_${O} copy_word${I}_${O} ram${I}_${O}
+endgenerate
+endgenerate
+
+# Reduce per-destination ready signals for each ingress.
+generate I PORTS
+wire input_ok${I}_0 u1
+comb input_ok${I}_0 const 0
+generate O PORTS
+wire input_ok${I}_${O+1} u1
+comb input_ok${I}_${O+1} or input_ok${I}_${O} ready${I}_${O}
+endgenerate
+comb in_ready${I} and input_ok${I}_$(PORTS) running
+endgenerate
+
+# Register the grant for the next cycle. The scheduler uses queue and
+# packet-lock state after this edge so a packet boundary introduces no gap.
+generate O PORTS
+wire seen0_${O} u1
+comb seen0_${O} const 0
+wire fav_seen0_${O} u1
+comb fav_seen0_${O} const 0
+wire picked0_${O} u4
+comb picked0_${O} const 0
+wire payload0_${O} u33
+comb payload0_${O} const 0
+generate I PORTS
+wire eligible${I}_${O} u1
+comb eligible${I}_${O} ge index${I} cursor${O}_d
+wire fav${I}_${O} u1
+comb fav${I}_${O} and eligible${I}_${O} valid${I}_${O}_d
+wire seen${I+1}_${O} u1
+comb seen${I+1}_${O} or seen${I}_${O} valid${I}_${O}_d
+wire fav_seen${I+1}_${O} u1
+comb fav_seen${I+1}_${O} or fav_seen${I}_${O} fav${I}_${O}
+wire first${I}_${O} u1
+comb first${I}_${O} xor seen${I}_${O} one1
+wire fav_first${I}_${O} u1
+comb fav_first${I}_${O} xor fav_seen${I}_${O} one1
+wire normal${I}_${O} u1
+comb normal${I}_${O} and first${I}_${O} valid${I}_${O}_d
+wire preferred${I}_${O} u1
+comb preferred${I}_${O} and fav_first${I}_${O} fav${I}_${O}
+wire unlocked_grant${I}_${O} u1
+comb unlocked_grant${I}_${O} mux fav_seen$(PORTS)_${O} preferred${I}_${O} normal${I}_${O}
+wire is_locked${I}_${O} u1
+comb is_locked${I}_${O} eq lock_id${O}_d index${I}
+wire locked_grant${I}_${O} u1
+comb locked_grant${I}_${O} and is_locked${I}_${O} valid${I}_${O}_d
+wire grant${I}_${O} u1
+wire grant${I}_${O}_d u1
+comb grant${I}_${O}_d mux locked${O}_d locked_grant${I}_${O} unlocked_grant${I}_${O}
+sync grant${I}_${O} clk rst grant${I}_${O}_d
+wire candidate${I}_${O} u4
+comb candidate${I}_${O} mux grant${I}_${O} after${I} zero4
+wire piece${I}_${O} u33
+comb piece${I}_${O} mux grant${I}_${O} word${I}_${O} zero33
+wire picked${I+1}_${O} u4
+comb picked${I+1}_${O} or picked${I}_${O} candidate${I}_${O}
+wire payload${I+1}_${O} u33
+comb payload${I+1}_${O} or payload${I}_${O} piece${I}_${O}
+endgenerate
+wire has_pick${O} u1
+comb has_pick${O} ne picked$(PORTS)_${O} zero4
+comb out_valid${O} and has_pick${O} running
+comb out_data${O} slice payload$(PORTS)_${O} 31 0
+comb out_last${O} slice payload$(PORTS)_${O} 32 32
+wire pop_enable${O} u1
+comb pop_enable${O} and out_ready${O} running
+wire fire${O} u1
+comb fire${O} and out_valid${O} out_ready${O}
+wire end_packet${O} u1
+comb end_packet${O} and fire${O} out_last${O}
+wire not_end${O} u1
+comb not_end${O} xor end_packet${O} one1
+wire active${O} u1
+comb active${O} or locked${O} out_valid${O}
+wire locked${O} u1
+wire locked${O}_d u1
+comb locked${O}_d and active${O} not_end${O}
+sync locked${O} clk rst locked${O}_d
+wire new_id${O} u4
+comb new_id${O} sub picked$(PORTS)_${O} one4
+wire lock_id${O} u4
+wire lock_id${O}_d u4
+comb lock_id${O}_d mux out_valid${O} new_id${O} lock_id${O}
+sync lock_id${O} clk rst lock_id${O}_d
+wire cursor${O} u4
+wire cursor${O}_d u4
+comb cursor${O}_d mux end_packet${O} picked$(PORTS)_${O} cursor${O}
+sync cursor${O} clk rst cursor${O}_d
+endgenerate
+end
