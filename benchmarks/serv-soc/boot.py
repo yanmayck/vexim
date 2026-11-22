@@ -2,7 +2,7 @@
 from pathlib import Path
 
 
-def boot_rom(path, *, serial_overlap=False):
+def boot_rom(path, *, serial_overlap=False, board_uart=False):
     program = []
     labels = {}
 
@@ -69,6 +69,10 @@ def boot_rom(path, *, serial_overlap=False):
     load(8, 1, 24)
     load(9, 1, 24)
     branch(8, 9, "fail")
+    if board_uart:
+        for byte in b"PASS\r\n":
+            add(8, 0, byte)
+            store(8, 1, 16)
     add(8, 0, 0x5a)
     store(8, 1, 48)
     program.append(0x6f)

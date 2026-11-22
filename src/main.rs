@@ -1,3 +1,6 @@
+mod design;
+mod global_share;
+
 use std::{
     collections::BTreeMap,
     env, fs,
@@ -7,9 +10,12 @@ use std::{
 
 fn run() -> Result<(), String> {
     let args: Vec<_> = env::args_os().skip(1).collect();
+    if args.first().is_some_and(|arg| arg == "design") {
+        return design::run(&args[1..]);
+    }
     let usage = "Usage: veximc check INPUT.vxm [--param NAME=VALUE]...\n       veximc build INPUT.vxm [-o OUTPUT.sv] [--param NAME=VALUE]... [--opt-area]";
     if args.len() == 1 && args[0] == "--help" {
-        println!("{usage}");
+        println!("{usage}\n       {}", design::USAGE);
         return Ok(());
     }
     if args.len() == 1 && args[0] == "--version" {

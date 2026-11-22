@@ -112,3 +112,29 @@ The [RAM example](examples/ram.vxm) accepts independent read and write addresses
 ```sh
 cargo run -- build examples/ram.vxm --param DEPTH=12 -o ram.sv
 ```
+
+## Constant ROM
+
+Declare an immutable table as `rom NAME uN VALUE VALUE ...` with
+space-separated unsigned decimal entries. The address width is
+`max(1, ceil(log2(entries)))`. A registered read
+`rom_read DEST NAME CLK ADDR` samples the address on the rising edge
+of the one-bit clock. Padding addresses return zero. The read result
+is unspecified before the first edge. No reset or write port is
+required. The emitted synchronous array supports target-specific
+ROM inference. See the [UP5K ROM benchmark](benchmarks/rom-packing/README.md).
+
+## Whole-design optimization
+
+`veximc design TOP INPUT.sv INPUT.vxm ... -o OUTPUT.sv [--share] [--prune]`
+elaborates a connected design using Yosys from PATH and emits flattened
+SystemVerilog. The input list contains self-contained modules, and
+inter-module wiring is expressed in SystemVerilog. Relative includes
+and external memory files are outside this command's staging contract.
+
+`--share` runs SAT-based resource sharing after flattening. It can
+merge operators from different instances when their activation is
+exclusive. It leaves concurrently used resources in place. `--prune`
+removes unobserved internal logic and retains the top-level ports.
+CPU firmware access patterns are outside this analysis unless the
+hardware connectivity itself makes an internal value unused.

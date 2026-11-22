@@ -1,5 +1,39 @@
 use veximc::parse;
 
+const ROM: &str = "module lookup\ninput clk u1\ninput addr u2\noutput q u8\nrom words u8 99 124 119\nrom_read q words clk addr\nend";
+
+#[test]
+fn synchronous_rom_is_zero_padded_and_unused_tables_are_removed() {
+    let source = ROM.replace("end", "rom unused u8 0 1 2\nend");
+    let rtl = parse(&source).unwrap().system_verilog();
+    assert!(rtl.contains("\\words [0:3]"));
+    assert!(rtl.contains("\\words [3] = 8'd0"));
+    assert!(rtl.contains("always_ff @(posedge \\clk ) \\q <= \\words [\\addr ];"));
+    assert!(!rtl.contains("unused"));
+}
+
+#[test]
+fn synchronous_rom_rejects_invalid_values_ports_and_writes() {
+    for (old, new, message) in [
+        ("99 124 119", "99 256 119", "fits u8"),
+        ("input addr u2", "input addr u3", "expected u2"),
+        ("output q u8", "output q u16", "destination width"),
+        (
+            "rom_read q words clk addr",
+            "comb q read words addr",
+            "synchronous rom_read",
+        ),
+        (
+            "\nend",
+            "\nwrite words clk clk addr q\nend",
+            "cannot target a ROM",
+        ),
+    ] {
+        let error = parse(&ROM.replace(old, new)).err().expect(new);
+        assert!(error.message.contains(message), "{error}");
+    }
+}
+
 const RAM: &str = include_str!("../examples/ram.vxm");
 
 #[test]

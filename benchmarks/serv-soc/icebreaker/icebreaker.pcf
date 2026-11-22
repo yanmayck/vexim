@@ -1,0 +1,9 @@
+# Pin numbers from the IceStorm iCEBreaker example constraints.
+set_io clk_12m 35
+set_io button_n 10
+set_io uart_tx 9
+set_io pass_led_n 37
+set_io spi_mosi 4
+set_io spi_miso 2
+set_io spi_sck 47
+set_io spi_cs_n 45

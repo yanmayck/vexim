@@ -51,6 +51,11 @@ resources, FPGA synthesis and routed timing.
 The [SERV SoC pilot](benchmarks/serv-soc/README.md) boots firmware on
 a complete ECP5 system with SRAM, DMA, UART, SPI, and a timer.
 
+The [iCEBreaker V6 build](benchmarks/serv-soc/icebreaker/README.md) runs
+the SoC boot test over UART and emits a pin-constrained bitstream.
+Vexim also supports synchronous ROM inference and a Yosys-backed
+whole-design flow for resource sharing and dead logic pruning.
+
 ## Write and compile hardware
 
 Install from source:

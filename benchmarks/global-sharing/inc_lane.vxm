@@ -1,0 +1,7 @@
+module inc_lane
+input value u32
+output incremented u32
+wire one u32
+comb one const 1
+comb incremented add value one
+end

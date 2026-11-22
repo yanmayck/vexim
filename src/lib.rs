@@ -51,6 +51,11 @@ enum Operation {
         memory: usize,
         address: usize,
     },
+    RomRead {
+        memory: usize,
+        clock: usize,
+        address: usize,
+    },
     Register {
         clock: usize,
         reset: usize,
@@ -78,7 +83,7 @@ impl Operation {
                 common,
                 ..
             } => vec![select, yes, no, common],
-            Self::Constant(_) | Self::Register { .. } => vec![],
+            Self::Constant(_) | Self::Register { .. } | Self::RomRead { .. } => vec![],
         }
     }
 }
@@ -94,6 +99,7 @@ struct Memory {
     depth: u32,
     line: usize,
     write: Option<MemoryWrite>,
+    contents: Option<Vec<u64>>,
 }
 
 impl Memory {
@@ -223,6 +229,36 @@ pub fn parse_with_parameters(
                     depth: depth as u32,
                     line,
                     write: None,
+                    contents: None,
+                });
+            }
+            ["rom", id, ty, values @ ..] if !values.is_empty() => {
+                unique_name(id)?;
+                let width = width(ty)?;
+                let contents = values
+                    .iter()
+                    .map(|value| {
+                        decimal(value)
+                            .filter(|&value| width == 64 || value < (1_u64 << width))
+                            .ok_or_else(|| {
+                                error(&format!(
+                                    "ROM entry must be a decimal literal that fits u{width}"
+                                ))
+                            })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let depth = u32::try_from(contents.len())
+                    .ok()
+                    .filter(|&depth| depth <= 2_147_483_647)
+                    .ok_or_else(|| error("ROM depth must be between 1 and 2147483647"))?;
+                memory_names.insert(*id, memories.len());
+                memories.push(Memory {
+                    name: (*id).into(),
+                    width,
+                    depth,
+                    line,
+                    write: None,
+                    contents: Some(contents),
                 });
             }
             [kind @ ("input" | "output" | "wire"), id, ty] => {
@@ -241,7 +277,7 @@ pub fn parse_with_parameters(
                     line,
                 });
             }
-            ["comb" | "sync" | "write", ..] => statements.push((line, tokens)),
+            ["comb" | "sync" | "write" | "rom_read", ..] => statements.push((line, tokens)),
             ["end"] => ended = true,
             _ => return Err(error("expected a declaration, driver, or end")),
         }
@@ -291,6 +327,9 @@ pub fn parse_with_parameters(
         };
         if let ["write", memory, clock, enable, address, data] = tokens.as_slice() {
             let memory = &mut memories[memory_index(memory)?];
+            if memory.contents.is_some() {
+                return Err(error("write cannot target a ROM"));
+            }
             if memory.write.is_some() {
                 return Err(error("memory already has a write port"));
             }
@@ -327,11 +366,35 @@ pub fn parse_with_parameters(
             ["comb", _, "read", memory, address] => {
                 let memory = memory_index(memory)?;
                 let declaration = &memories[memory];
+                if declaration.contents.is_some() {
+                    return Err(error("ROM requires a synchronous rom_read"));
+                }
                 if declaration.width != width {
                     return Err(error("read destination width must match memory word width"));
                 }
                 Operation::Read {
                     memory,
+                    address: matching(address, declaration.address_width())?,
+                }
+            }
+            ["rom_read", _, memory, clock, address] => {
+                let memory = memory_index(memory)?;
+                let declaration = &memories[memory];
+                if declaration.contents.is_none() {
+                    return Err(error("rom_read requires a ROM declaration"));
+                }
+                if declaration.width != width {
+                    return Err(error(
+                        "ROM read destination width must match ROM word width",
+                    ));
+                }
+                let clock = matching(clock, 1)?;
+                if signals[clock].direction != Direction::Input {
+                    return Err(error("ROM clock must be a module input"));
+                }
+                Operation::RomRead {
+                    memory,
+                    clock,
                     address: matching(address, declaration.address_width())?,
                 }
             }
@@ -416,7 +479,10 @@ pub fn parse_with_parameters(
         };
         drivers[target] = Some(Driver { operation, line });
     }
-    if let Some(memory) = memories.iter().find(|memory| memory.write.is_none()) {
+    if let Some(memory) = memories
+        .iter()
+        .find(|memory| memory.contents.is_none() && memory.write.is_none())
+    {
         return Err(Diagnostic {
             line: memory.line,
             message: format!("memory {} has no write port", memory.name),
@@ -467,6 +533,7 @@ impl Module {
                     } => {
                         pending.extend([clock, reset, data]);
                     }
+                    Operation::RomRead { clock, address, .. } => pending.extend([clock, address]),
                     _ => pending.extend(driver.operation.combinational_inputs()),
                 }
             }
@@ -554,6 +621,7 @@ impl Module {
                     .filter(|&address| address >= u64::from(self.memories[memory].depth))
                     .map(|_| 0),
                 Operation::Register { .. }
+                | Operation::RomRead { .. }
                 | Operation::Mux(..)
                 | Operation::SharedBinary { .. }
                 | Operation::NarrowBinary(..) => None,
@@ -573,13 +641,19 @@ impl Module {
             for input in driver.operation.combinational_inputs() {
                 uses[input] += 1;
             }
-            if let Operation::Register {
-                clock, reset, data, ..
-            } = driver.operation
-            {
-                for input in [clock, reset, data] {
-                    uses[input] += 1;
+            match driver.operation {
+                Operation::Register {
+                    clock, reset, data, ..
+                } => {
+                    for input in [clock, reset, data] {
+                        uses[input] += 1;
+                    }
                 }
+                Operation::RomRead { clock, address, .. } => {
+                    uses[clock] += 1;
+                    uses[address] += 1;
+                }
+                _ => {}
             }
         }
         for memory in &self.memories {
@@ -749,8 +823,38 @@ impl Module {
         {
             writeln!(out, "  logic {}{};", range(s.width), escaped(&s.name)).unwrap();
         }
-        for memory in &self.memories {
+        let mut live_roms = vec![false; self.memories.len()];
+        for (index, driver) in self.drivers.iter().enumerate() {
+            if let Some(Driver {
+                operation: Operation::RomRead { memory, .. },
+                ..
+            }) = driver
+            {
+                live_roms[*memory] |= live[index];
+            }
+        }
+        for (index, memory) in self.memories.iter().enumerate() {
             let name = escaped(&memory.name);
+            if let Some(contents) = &memory.contents {
+                if !live_roms[index] {
+                    continue;
+                }
+                // Padding avoids placing a separate address comparator on the read path.
+                let depth = 1_u64 << memory.address_width();
+                writeln!(
+                    out,
+                    "  logic {}{name}[0:{}];\n  initial begin",
+                    range(memory.width),
+                    depth - 1
+                )
+                .unwrap();
+                for address in 0..depth {
+                    let value = contents.get(address as usize).copied().unwrap_or(0);
+                    writeln!(out, "    {name}[{address}] = {}'d{value};", memory.width).unwrap();
+                }
+                writeln!(out, "  end").unwrap();
+                continue;
+            }
             writeln!(
                 out,
                 "  logic {}{name}[0:{}];",
@@ -790,6 +894,9 @@ impl Module {
                         writeln!(out, "  assign {target}= {word};")
                     }
                 }
+                Operation::RomRead { memory, clock, address } => writeln!(out,
+                    "  always_ff @(posedge {}) {target}<= {}[{}];", signal(clock),
+                    escaped(&self.memories[memory].name), signal(address)),
                 Operation::Constant(value) => writeln!(out, "  assign {target}= {width}'d{value};"),
                 Operation::Copy(a) => writeln!(out, "  assign {target}= {};", signal(a)),
                 Operation::Slice(a, msb, lsb) => {

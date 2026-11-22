@@ -1,0 +1,14 @@
+module ip_leaf
+input clk u1
+input rst u1
+input data u8
+input scratch_data u16
+output main_result u8
+output unused_diagnostic u16
+wire one u16
+wire next_diagnostic u16
+comb one const 1
+comb next_diagnostic add scratch_data one
+sync main_result clk rst data 0
+sync unused_diagnostic clk rst next_diagnostic 0
+end
