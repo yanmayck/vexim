@@ -29,7 +29,8 @@ The mixed scenario uses random destinations and independent egress
 stalls. The contended scenario sends all ingress traffic to one egress.
 The blocked scenario holds egress zero for 320 cycles and checks that
 each other egress transfers a beat every cycle from cycle 8 through 319.
-All three port counts are simulated. Synthesis and routing use 4x4.
+All three port counts are simulated. The physical comparison defaults
+to 4x4. Use `--physical-ports 8` to synthesize and route the 8x8 pair.
 
 ## ECP5 results
 
@@ -60,6 +61,40 @@ harness, it packs into 25.4% fewer combinational cells and its median
 Fmax is 21.4% higher. The two resource counts come from separate synthesis
 flows and describe these implementations and this target.
 
+### Scaling to 8x8
+
+Both implementations pass 2,304 packet transfers across the three
+8x8 scenarios. With output zero blocked, the seven remaining outputs
+each deliver 312 consecutive beats, one per cycle. The common mixed
+traffic p99 for outputs 0–7 is 270, 83, 242, 99, 230, 223, 179 and
+174 cycles. In the blocked case, the free outputs each have an
+eight-cycle p99. The blocked output has a 326-cycle p99.
+
+| Measure | SystemVerilog | Vexim |
+|---|---:|---:|
+| Standalone LUT4 | 12,944 | 8,990 |
+| Standalone flip-flops | 2,336 | 2,336 |
+| BRAM blocks (DP16KD) | 64 | 64 |
+| Packed combinational cells with harness | 13,631 | 11,041 |
+| Post-route Fmax measurements | 5/5 | 0/5 |
+| Complete routing artifacts within budget | 2/5 | 0/5 |
+| Median measured Fmax | 50.20 MHz | — |
+| Estimated aggregate mixed throughput | 1,095.1 MB/s | — |
+
+The router2 SystemVerilog frequencies for seeds 1–5 are 50.20, 51.84,
+46.86, 50.76 and 41.80 MHz. For the last three, nextpnr printed final
+timing after reporting routing complete, then timed out before saving
+the JSON report. The runner marks these as log-derived timing. All
+five Vexim attempts timed out before router2 reported completion, so
+their pre-route frequencies are excluded. Vexim saves 30.5% of the
+standalone LUTs but has no comparable router2 Fmax under this budget.
+
+A supplemental run used `--router router1 --seed 2` on both existing
+harness netlists, without requesting `--textcfg`. Both runs reached
+the same 240-second budget before completing routing. A routed Vexim
+critical path is therefore unavailable for evaluating a balanced
+arbiter or data selector.
+
 ## Reproduce in PowerShell
 
 Run from the repository root. Build the `vexim-ecp5-tools` image as in
@@ -73,3 +108,7 @@ docker run --rm --network none -e PYTHONDONTWRITEBYTECODE=1 -v "$($pwd.Path)/ben
 
 The runner writes all emitted RTL, test vectors, synthesis logs,
 per-seed routing reports and `results.json`.
+
+For 8x8, use a separate output directory for both commands and append
+`--physical-ports 8` to the Python command. The 8x8 run gives each
+routing seed 240 seconds.

@@ -1,5 +1,7 @@
 """Run the configurable Vexim packet switch against independent SystemVerilog."""
+import argparse
 import json
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -18,11 +20,29 @@ SYNTH = "synth_ecp5"
 HERE = Path(__file__).resolve().parent
 
 
-def route(harness, label, seed):
+def logged_timing(log):
+    """Read timing only after router2 has reported successful routing."""
+    _, marker, final = log.read_text().partition("Routing complete.")
+    if not marker:
+        return {}
+    match = re.search(
+        r"Max frequency for clock '([^']+)': ([\d.]+) MHz \((?:PASS|FAIL) at ([\d.]+) MHz\)",
+        final,
+    )
+    if not match:
+        return {}
+    clock, actual, target = match.groups()
+    return {"clock": clock, "fmax_mhz": float(actual), "target_mhz": float(target),
+            "timing_source": "post-route log"}
+
+
+def route(harness, label, seed, timeout):
     try:
-        return route_seed(OUTPUT, harness, label, seed, timeout=120)
+        return route_seed(OUTPUT, harness, label, seed, timeout=timeout)
     except subprocess.TimeoutExpired:
-        return {"seed": seed, "error": "Routing exceeded 120 seconds"}
+        log = OUTPUT / f"{label}-seed-{seed}.log"
+        return {"seed": seed, "error": f"Run exceeded {timeout} seconds",
+                **logged_timing(log)}
     except subprocess.CalledProcessError as error:
         return {"seed": seed, "error": f"nextpnr exited with status {error.returncode}"}
 
@@ -52,14 +72,32 @@ def simulate(compiler, n):
     return {"traffic": traffic, "compiler_seconds": compiler_seconds}, designs
 
 
+def summarize(runs, traffic):
+    frequencies = [run["fmax_mhz"] for run in runs if "fmax_mhz" in run]
+    fmax = median(frequencies) if frequencies else None
+    result = {"runs": runs, "median_fmax_mhz": fmax}
+    if fmax is not None:
+        result["throughput_mb_s_per_port"] = {
+            case: [beats*4/metrics["cycles"]*fmax for beats in metrics["beats"]]
+            for case, metrics in traffic.items()
+        }
+    return result
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--physical-ports", type=int, choices=(4, 8), default=4)
+    args = parser.parse_args()
+    physical = args.physical_ports
+    timeout = 240 if physical == 8 else 120
+    variants = f"variants_{physical}x{physical}"
     compiler = OUTPUT / "veximc"
-    results = {"simulation": {}, "variants_4x4": {}}
+    results = {"simulation": {}, variants: {}}
     harnesses = {}
     for n in (2, 4, 8):
         stats, designs = simulate(compiler, n)
         results["simulation"][n] = stats
-        if n != 4:
+        if n != physical:
             continue
         for label, design in designs.items():
             prefix = OUTPUT / str(n) / label
@@ -69,22 +107,17 @@ def main():
                     prefix.with_suffix(".synth.log"))
             counts = Counter(cell["type"] for cell in
                              json.loads(mapped.read_text())["modules"][TOP]["cells"].values())
-            results["variants_4x4"][label] = {"cells": dict(counts)}
+            results[variants][label] = {"cells": dict(counts)}
             harnesses[label] = build_harness(TOP, design, mapped, prefix, synthesis=SYNTH)
             print(n, label, dict(counts), flush=True)
 
     with ThreadPoolExecutor(max_workers=4) as pool:
-        jobs = {label: [pool.submit(route, harness, label, seed) for seed in range(1, 6)]
+        jobs = {label: [pool.submit(route, harness, label, seed, timeout) for seed in range(1, 6)]
                 for label, harness in harnesses.items()}
         for label, futures in jobs.items():
             runs = [job.result() for job in futures]
-            fmax = [run["fmax_mhz"] for run in runs if "fmax_mhz" in run]
-            variant = results["variants_4x4"][label]
-            variant.update(runs=runs, median_fmax_mhz=median(fmax) if fmax else None)
-            if fmax:
-                variant["throughput_mb_s_per_port"] = {
-                    case: [beats*4/metrics["cycles"]*median(fmax) for beats in metrics["beats"]]
-                    for case, metrics in results["simulation"][4]["traffic"].items()}
+            variant = results[variants][label]
+            variant.update(summarize(runs, results["simulation"][physical]["traffic"]))
             print(label, variant["median_fmax_mhz"], flush=True)
     (OUTPUT / "results.json").write_text(json.dumps(results, indent=2) + "\n")
 
