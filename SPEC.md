@@ -101,13 +101,37 @@ See the [UART transmitter](examples/uart_tx.vxm) for a complete design that comb
 
 Both `check` and `build` accept a repeatable `--param NAME=VALUE` option. Unknown and duplicate overrides are errors. The compiler validates the specialized module and emits concrete widths and depths in SystemVerilog.
 
+## Structural generation
+
+`generate INDEX COUNT` repeats a module body fragment, ending at
+`endgenerate`. The count is a literal or previously declared parameter
+in the range 1–1024. The index is zero-based and scoped to the block.
+Nested blocks use distinct index names. Use `${INDEX}` to insert the
+decimal index into a name or constant, `${INDEX+1}` to add a literal
+offset, and `$(PARAM)` to insert a parameter value. Generated statements
+obey the ordinary type and driver rules and report the original source
+line. Generation is limited to 16 nested levels and 100,000 expansion
+steps per module.
+
+```vexim
+module lanes
+param N 4
+generate I N
+input in_${I} u8
+output out_${I} u8
+comb out_${I} copy in_${I}
+endgenerate
+end
+```
+
 ## Indexed memory
 
 - `mem NAME uN DEPTH` declares an array of unsigned words. Depth can be a decimal integer or a parameter from 1 to 2,147,483,647. The practical depth depends on the synthesis target.
 - `write NAME CLK ENABLE ADDR DATA` defines the memory's single write port. It writes on the rising edge of the one-bit clock input when the one-bit enable is set. The data width must match the word width.
 - `comb DEST read NAME ADDR` adds a combinational read. The destination width must match the word width. A read from an address just written observes the new word after the clock edge.
+- `read_sync DEST NAME CLK ADDR` samples the address and registers the result on the rising edge of a one-bit clock input. It can run concurrently with `write`. On a same-edge read and write to the same address on one clock, RTL simulation reads the old word. A caller that requires forwarding can add an explicit bypass. The read output has no implicit reset.
 - All addresses have width `max(1, ceil(log2(DEPTH)))`. An out-of-range read returns zero and an out-of-range write leaves the memory intact. Valid words have unspecified contents until written. The memory has no implicit reset.
-- Read addresses participate in combinational cycle checks. Writes cross a clock edge.
+- Combinational read addresses participate in combinational cycle checks. Writes and registered reads cross a clock edge.
 
 The [RAM example](examples/ram.vxm) accepts independent read and write addresses. Specialize it to 12 words with:
 

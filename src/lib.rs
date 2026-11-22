@@ -1,3 +1,5 @@
+mod generate;
+
 use std::{
     collections::{BTreeMap, VecDeque},
     fmt,
@@ -52,7 +54,7 @@ enum Operation {
         memory: usize,
         address: usize,
     },
-    RomRead {
+    SyncRead {
         memory: usize,
         clock: usize,
         address: usize,
@@ -87,7 +89,7 @@ impl Operation {
                 common,
                 ..
             } => vec![select, yes, no, common],
-            Self::Constant(_) | Self::Register { .. } | Self::RomRead { .. } => vec![],
+            Self::Constant(_) | Self::Register { .. } | Self::SyncRead { .. } => vec![],
         }
     }
 }
@@ -167,16 +169,11 @@ pub fn parse_with_parameters(
     let mut memories: Vec<Memory> = Vec::new();
     let mut statements = Vec::new();
     let mut ended = false;
-    let mut last_line = 1;
-    for (index, text) in source.lines().enumerate() {
-        let line = index + 1;
-        last_line = line;
-        let tokens: Vec<_> = text
-            .split('#')
-            .next()
-            .unwrap_or("")
-            .split_whitespace()
-            .collect();
+    let last_line = source.lines().count().max(1);
+    let expanded = generate::expand(source, overrides)?;
+    for (line, text) in &expanded {
+        let line = *line;
+        let tokens: Vec<_> = text.split_whitespace().collect();
         if tokens.is_empty() {
             continue;
         }
@@ -281,7 +278,9 @@ pub fn parse_with_parameters(
                     line,
                 });
             }
-            ["comb" | "sync" | "write" | "rom_read", ..] => statements.push((line, tokens)),
+            ["comb" | "sync" | "write" | "rom_read" | "read_sync", ..] => {
+                statements.push((line, tokens))
+            }
             ["end"] => ended = true,
             _ => return Err(error("expected a declaration, driver, or end")),
         }
@@ -381,22 +380,23 @@ pub fn parse_with_parameters(
                     address: matching(address, declaration.address_width())?,
                 }
             }
-            ["rom_read", _, memory, clock, address] => {
+            [kind @ ("rom_read" | "read_sync"), _, memory, clock, address] => {
                 let memory = memory_index(memory)?;
                 let declaration = &memories[memory];
-                if declaration.contents.is_none() {
+                if *kind == "rom_read" && declaration.contents.is_none() {
                     return Err(error("rom_read requires a ROM declaration"));
                 }
+                if *kind == "read_sync" && declaration.contents.is_some() {
+                    return Err(error("read_sync requires a RAM declaration"));
+                }
                 if declaration.width != width {
-                    return Err(error(
-                        "ROM read destination width must match ROM word width",
-                    ));
+                    return Err(error("read destination width must match memory word width"));
                 }
                 let clock = matching(clock, 1)?;
                 if signals[clock].direction != Direction::Input {
-                    return Err(error("ROM clock must be a module input"));
+                    return Err(error("read clock must be a module input"));
                 }
-                Operation::RomRead {
+                Operation::SyncRead {
                     memory,
                     clock,
                     address: matching(address, declaration.address_width())?,
@@ -552,7 +552,7 @@ impl Module {
                     } => {
                         pending.extend([clock, reset, data]);
                     }
-                    Operation::RomRead { clock, address, .. } => pending.extend([clock, address]),
+                    Operation::SyncRead { clock, address, .. } => pending.extend([clock, address]),
                     _ => pending.extend(driver.operation.combinational_inputs()),
                 }
             }
@@ -655,7 +655,7 @@ impl Module {
                     .filter(|&address| address >= u64::from(self.memories[memory].depth))
                     .map(|_| 0),
                 Operation::Register { .. }
-                | Operation::RomRead { .. }
+                | Operation::SyncRead { .. }
                 | Operation::Mux(..)
                 | Operation::SharedBinary { .. }
                 | Operation::NarrowBinary(..) => None,
@@ -683,7 +683,7 @@ impl Module {
                         uses[input] += 1;
                     }
                 }
-                Operation::RomRead { clock, address, .. } => {
+                Operation::SyncRead { clock, address, .. } => {
                     uses[clock] += 1;
                     uses[address] += 1;
                 }
@@ -860,7 +860,7 @@ impl Module {
         let mut live_roms = vec![false; self.memories.len()];
         for (index, driver) in self.drivers.iter().enumerate() {
             if let Some(Driver {
-                operation: Operation::RomRead { memory, .. },
+                operation: Operation::SyncRead { memory, .. },
                 ..
             }) = driver
             {
@@ -928,9 +928,18 @@ impl Module {
                         writeln!(out, "  assign {target}= {word};")
                     }
                 }
-                Operation::RomRead { memory, clock, address } => writeln!(out,
-                    "  always_ff @(posedge {}) {target}<= {}[{}];", signal(clock),
-                    escaped(&self.memories[memory].name), signal(address)),
+                Operation::SyncRead { memory, clock, address } => {
+                    let memory = &self.memories[memory];
+                    let address = signal(address);
+                    let word = format!("{}[{address}]", escaped(&memory.name));
+                    let value = if memory.contents.is_none() {
+                        memory_bound(memory, &address)
+                            .map_or(word.clone(), |bound| format!("({bound}) ? {word} : {width}'d0"))
+                    } else {
+                        word
+                    };
+                    writeln!(out, "  always_ff @(posedge {}) {target}<= {value};", signal(clock))
+                }
                 Operation::Constant(value) => writeln!(out, "  assign {target}= {width}'d{value};"),
                 Operation::Copy(a) => writeln!(out, "  assign {target}= {};", signal(a)),
                 Operation::Slice(a, msb, lsb) => {

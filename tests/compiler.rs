@@ -1,5 +1,32 @@
 use veximc::parse;
 
+#[test]
+fn generation_specializes_nested_indices_and_preserves_source_lines() {
+    let source = "module matrix\nparam N 2\ngenerate I N\ngenerate J N\n\
+                  output q_${I}_${J+1} u4\ncomb q_${I}_${J+1} const $(N)\n\
+                  endgenerate\nendgenerate\nend";
+    let rtl = veximc::parse_with_parameters(&source, &[("N".into(), 3)].into())
+        .unwrap()
+        .system_verilog();
+    assert_eq!(rtl.matches("4'd3").count(), 9);
+    assert!(rtl.contains("\\q_2_3 "));
+    assert_eq!(rtl.matches("// Vexim line 6").count(), 9);
+    let invalid = source.replace("${J+1}", "${K}");
+    assert_eq!(parse(&invalid).err().unwrap().line, 5);
+}
+
+#[test]
+fn synchronous_ram_has_registered_read_and_bounds() {
+    let source = "module ram\ninput clk u1\ninput we u1\ninput addr u2\n\
+                  input d u8\noutput q u8\nmem words u8 3\n\
+                  write words clk we addr d\nread_sync q words clk addr\nend";
+    let rtl = parse(source).unwrap().system_verilog();
+    assert!(rtl.contains("always_ff @(posedge \\clk ) \\q <= "));
+    assert!(rtl.contains("? \\words [\\addr ] : 8'd0"));
+    let invalid = source.replace("input clk u1", "wire clk u1");
+    assert!(parse(&invalid).is_err());
+}
+
 const ROM: &str = "module lookup\ninput clk u1\ninput addr u2\noutput q u8\nrom words u8 99 124 119\nrom_read q words clk addr\nend";
 
 #[test]
