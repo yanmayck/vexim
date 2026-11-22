@@ -118,3 +118,39 @@ Run the same Docker mounts with that image and command
 `python3 /benchmarks/picorv32/route.py official`, then
 `python3 /benchmarks/picorv32/route.py vexim`.
 Timing is an estimate for the wrapped core, with automatic pin placement.
+
+### Timing diagnosis and word-register control
+
+Routing the direct Yosys SystemVerilog export of the same intermediate
+snapshot isolates another point in the flow. Use the same mounts as
+above with `route.py intermediate-sv`.
+
+| Path through the toolchain | Standalone LUT4s | Wrapped Fmax median | Seeds at 75 MHz |
+|---|---:|---:|---:|
+| Official RTL | 2,479 | 79.93 MHz | 4/5 |
+| Intermediate exported directly by Yosys | 2,609 | 75.87 MHz | 3/5 |
+| Intermediate round-tripped through Vexim | 2,718 | 71.75 MHz | 1/5 |
+
+The representative median routes have different critical paths. The
+official path runs from an operand register through arithmetic and
+branch selection. The Vexim path starts at the divider's
+`quotient_msk[8]` and ends at `divisor[62]` through its control logic.
+Both paths are internal to the CPU in the timing harness.
+
+| Delay component | Official median seed | Vexim median seed |
+|---|---:|---:|
+| Routing | 8.38 ns | 11.57 ns |
+| Logic | 3.61 ns | 1.42 ns |
+| Total, including register delays | 12.51 ns | 13.94 ns |
+
+The three-arm result shows losses both before and during the Vexim
+round trip for this flow. It does not isolate one emitter operation
+as their cause. Compared with official synthesis, the Vexim design
+uses 64 fewer dedicated carry cells and 74 more wide-mux primitives
+(PFUMX plus L6MUX21).
+
+An optional `--registers` profile preserves 143 whole-register cells
+on top of the combined profile. It passes the same three program tests
+and maps to 2,735 LUT4s, 17 more than the combined profile. The direct
+Yosys SV export of its intermediate maps to 2,556 LUT4s. This
+experiment only measures synthesis for the word-register profile.

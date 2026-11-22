@@ -15,14 +15,14 @@ OUT = Path("/output")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("variant", choices=("official", "vexim"))
+    parser.add_argument("variant", choices=("official", "vexim", "intermediate-sv"))
     args = parser.parse_args()
     variant = args.variant
     if variant == "official":
         rtl = Path("/rtl/picorv32.v")
         synth = "chparam -set ENABLE_MUL 1 -set ENABLE_DIV 1 picorv32; synth_ecp5"
     else:
-        rtl = OUT / "pico.sv"
+        rtl = OUT / ("pico.sv" if variant == "vexim" else "intermediate-sv.sv")
         synth = "synth_ecp5"
     harness = build_harness("picorv32", rtl, OUT / f"{variant}.ecp5.json",
                             OUT / f"{variant}-timing", synthesis=synth)

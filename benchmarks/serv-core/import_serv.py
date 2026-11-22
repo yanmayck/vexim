@@ -70,6 +70,32 @@ def translate(module, *, name="serv_rf_vex", source="the pinned ISC-licensed SER
                 for index, output in enumerate(ports["RD_DATA"][start:start + width]):
                     comb(bit(output), 1, f"slice {read} {index} {index}")
             lines.append(f"write {name} {args['WR_CLK']} {args['WR_EN']} {wr_addr} {data}")
+        elif kind in {"$dff", "$dffe", "$sdff", "$sdffe", "$sdffce"}:
+            params = cell["parameters"]
+            width = len(ports["Q"])
+            if not 1 <= width <= 64 or int(params["CLK_POLARITY"], 2) != 1:
+                raise ValueError(f"unsupported word register: {kind} width {width}")
+            tag = f"register{i}"
+            data = pack(ports["D"], f"{tag}_data")
+            lines.append(f"wire {tag} u{width}")
+            if "SRST" in ports:
+                reset = args["SRST"]
+                if int(params["SRST_POLARITY"], 2) == 0:
+                    reset = comb(f"{tag}_reset", 1, f"xor {reset} one")
+                value = int(params["SRST_VALUE"], 2)
+                reset_value = comb(f"{tag}_reset_value", width, f"const {value}")
+                if kind == "$sdffce":
+                    data = comb(f"{tag}_reset_data", width, f"mux {reset} {reset_value} {data}")
+            if "EN" in ports:
+                enable = args["EN"]
+                if int(params["EN_POLARITY"], 2) == 0:
+                    enable = comb(f"{tag}_enable", 1, f"xor {enable} one")
+                data = comb(f"{tag}_enable_data", width, f"mux {enable} {data} {tag}")
+            if "SRST" in ports and kind != "$sdffce":
+                data = comb(f"{tag}_reset_data", width, f"mux {reset} {reset_value} {data}")
+            lines.append(f"sync {tag} {args['CLK']} no_reset {data}")
+            for index, output in enumerate(ports["Q"]):
+                comb(bit(output), 1, f"slice {tag} {index} {index}")
         elif kind == "$mux":
             width = len(ports["Y"])
             if not 1 <= width <= 64 or len(ports["S"]) != 1:

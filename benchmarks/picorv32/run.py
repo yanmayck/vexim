@@ -35,7 +35,11 @@ def main():
     parser.add_argument("--word", action="store_true", help="Preserve word-level add and sub cells")
     parser.add_argument("--mux", action="store_true", help="Also preserve word-level muxes")
     parser.add_argument("--compare", action="store_true", help="Also preserve word-level ordering comparisons")
+    parser.add_argument("--registers", action="store_true",
+                        help="Preserve word registers together with arithmetic, muxes and comparisons")
     args = parser.parse_args()
+    if args.registers:
+        args.mux = args.compare = True
     upstream = Path("/rtl/picorv32.v")
     verify = json.loads((HERE / "upstream.json").read_text())
     if hashlib.sha256(upstream.read_bytes().replace(b"\r\n", b"\n")).hexdigest() != verify["sha256_lf"]:
@@ -45,6 +49,8 @@ def main():
         preserved.append("$mux")
     if args.compare:
         preserved.extend(("$lt", "$le", "$gt", "$ge"))
+    if args.registers:
+        preserved.extend(("$dff", "$dffe", "$sdff", "$sdffe", "$sdffce"))
     selection = f"t:{preserved[0]}" if preserved else ""
     selection += "".join(f" t:{kind} %u" for kind in preserved[1:])
     mapping = f"techmap {selection} %n" if preserved else "techmap"
@@ -72,7 +78,7 @@ def main():
                    f"  {CORE} cpu({', '.join(wiring)});\nendmodule\n")
     arithmetic = Counter(cell["type"] for cell in module["cells"].values())
     results = {"vexim_lines": len(source.splitlines()), "compile_seconds": compile_seconds,
-               "word_cells": {name: arithmetic[name] for name in ("$add", "$sub", "$mux", "$lt", "$le", "$gt", "$ge")},
+               "word_cells": {name: arithmetic[name] for name in preserved},
                "seeds": {}, "ecp5": {}}
 
     for label, design, definitions in (("official", str(upstream), ["-DOFFICIAL"]),
