@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 
-def translate(module):
-    lines = ["# Generated from the pinned ISC-licensed SERV RTL.", "module serv_rf_vex"]
+def translate(module, *, name="serv_rf_vex", source="the pinned ISC-licensed SERV RTL"):
+    lines = [f"# Generated from {source}.", f"module {name}"]
     sources = {"0": "zero", "1": "one", "x": "zero", "z": "zero"}
     initialized = [name for name, net in module["netnames"].items()
                    if "init" in net["attributes"]]
@@ -40,23 +40,35 @@ def translate(module):
         if kind == "$mem_v2":
             p = {key: int(value, 2) for key, value in cell["parameters"].items()
                  if set(value) <= {"0", "1"}}
-            expected = {"RD_PORTS": 1, "WR_PORTS": 1, "RD_CLK_ENABLE": 0,
+            expected = {"WR_PORTS": 1, "RD_CLK_ENABLE": 0,
                         "WR_CLK_ENABLE": 1, "WR_CLK_POLARITY": 1, "OFFSET": 0,
                         "RD_TRANSPARENCY_MASK": 0, "RD_COLLISION_X_MASK": 0}
+            reads = p["RD_PORTS"]
             if (any(p.get(key) != value for key, value in expected.items()) or
                     set(cell["parameters"]["INIT"]) != {"x"} or
-                    ports["RD_EN"] != ["1"] or ports["RD_ARST"] != ["0"] or
-                    ports["RD_SRST"] != ["0"] or len(set(ports["WR_EN"])) != 1):
-                raise ValueError("unsupported SERV memory profile")
+                    ports["RD_EN"] != ["1"] * reads or ports["RD_ARST"] != ["0"] * reads or
+                    ports["RD_SRST"] != ["0"] * reads or len(set(ports["WR_EN"])) != 1):
+                raise ValueError("unsupported memory profile: expected asynchronous reads and one synchronous write")
             name = f"memory{i}"
             width, depth = p["WIDTH"], p["SIZE"]
             lines.append(f"mem {name} u{width} {depth}")
-            rd_addr = pack(ports["RD_ADDR"], f"{name}_rd")
+            if reads == 1:
+                read_addresses = [pack(ports["RD_ADDR"], f"{name}_rd")]
+            else:
+                addr_bits = p["ABITS"]
+                read_addresses = [
+                    pack(ports["RD_ADDR"][port * addr_bits:(port + 1) * addr_bits],
+                         f"{name}_{port}_rd")
+                    for port in range(reads)
+                ]
             wr_addr = pack(ports["WR_ADDR"], f"{name}_wr")
             data = pack(ports["WR_DATA"], f"{name}_data")
-            read = comb(f"{name}_data_out", width, f"read {name} {rd_addr}")
-            for index, output in enumerate(ports["RD_DATA"]):
-                comb(bit(output), 1, f"slice {read} {index} {index}")
+            for port, rd_addr in enumerate(read_addresses):
+                tag = name if reads == 1 else f"{name}_{port}"
+                read = comb(f"{tag}_data_out", width, f"read {name} {rd_addr}")
+                start = port * width
+                for index, output in enumerate(ports["RD_DATA"][start:start + width]):
+                    comb(bit(output), 1, f"slice {read} {index} {index}")
             lines.append(f"write {name} {args['WR_CLK']} {args['WR_EN']} {wr_addr} {data}")
         elif kind in {"$_AND_", "$_OR_", "$_XOR_", "$_NOT_", "$_MUX_"}:
             if kind == "$_MUX_":
