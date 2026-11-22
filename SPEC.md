@@ -22,6 +22,8 @@ A combinational driver has the form `comb DEST OP OPERANDS`. Each destination is
 | `slice SRC MSB LSB` | Inclusive range with zero-based indices. Both indices must be within the source, with MSB ≥ LSB. The destination width is MSB − LSB + 1. |
 | `concat A B` | Joins signals with `A` in the high bits. The destination width is the sum of both widths. |
 | `eq A B`, `ne A B` | Equality or inequality. The operands must have equal width and the destination must be `u1`. |
+| `lt A B`, `le A B`, `gt A B`, `ge A B` | Unsigned comparison. Operands have equal width and the destination is `u1`. |
+| `slt A B`, `sle A B`, `sgt A B`, `sge A B` | Signed two’s-complement comparison of equal-width operand bit patterns. The destination is `u1`. |
 | `mux SELECT A B` | Selects `A` for 1 and `B` for 0. The selector is `u1` and both branches have destination width. |
 
 Operands are signal names except the decimal literal in `const` and the decimal indices in `slice`. Use virtual wiring through declared signals to compose operations.

@@ -70,9 +70,20 @@ def translate(module, *, name="serv_rf_vex", source="the pinned ISC-licensed SER
                 for index, output in enumerate(ports["RD_DATA"][start:start + width]):
                     comb(bit(output), 1, f"slice {read} {index} {index}")
             lines.append(f"write {name} {args['WR_CLK']} {args['WR_EN']} {wr_addr} {data}")
-        elif kind in {"$add", "$sub"}:
+        elif kind == "$mux":
+            width = len(ports["Y"])
+            if not 1 <= width <= 64 or len(ports["S"]) != 1:
+                raise ValueError(f"unsupported mux width {width}")
+            a = pack(ports["A"], f"mux{i}_a")
+            b = pack(ports["B"], f"mux{i}_b")
+            result = comb(f"mux{i}_result", width, f"mux {args['S']} {b} {a}")
+            for index, output in enumerate(ports["Y"]):
+                comb(bit(output), 1, f"slice {result} {index} {index}")
+        elif kind in {"$add", "$sub", "$lt", "$le", "$gt", "$ge"}:
             params = cell["parameters"]
-            width = int(params["Y_WIDTH"], 2)
+            result_width = int(params["Y_WIDTH"], 2)
+            compare = kind in {"$lt", "$le", "$gt", "$ge"}
+            width = max(len(ports["A"]), len(ports["B"])) if compare else result_width
             if not 1 <= width <= 64:
                 raise ValueError(f"{kind} result width {width} is outside Vexim's range")
             signed = all(int(params[f"{name}_SIGNED"], 2) for name in ("A", "B"))
@@ -86,10 +97,15 @@ def translate(module, *, name="serv_rf_vex", source="the pinned ISC-licensed SER
                     else:
                         value = comb(f"arith{i}_{name}_wide", width, f"zext {value}")
                 operands.append(value)
-            op = "add" if kind == "$add" else "sub"
-            result = comb(f"arith{i}_result", width, f"{op} {' '.join(operands)}")
+            op = kind[1:]
+            if compare:
+                op = f"s{op}" if signed else op
+            result = comb(f"arith{i}_result", 1 if compare else width, f"{op} {' '.join(operands)}")
             for index, output in enumerate(ports["Y"]):
-                comb(bit(output), 1, f"slice {result} {index} {index}")
+                if compare:
+                    comb(bit(output), 1, f"copy {result if index == 0 else 'zero'}")
+                else:
+                    comb(bit(output), 1, f"slice {result} {index} {index}")
         elif kind in {"$_AND_", "$_OR_", "$_XOR_", "$_NOT_", "$_MUX_"}:
             if kind == "$_MUX_":
                 expression = f"mux {args['S']} {args['B']} {args['A']}"

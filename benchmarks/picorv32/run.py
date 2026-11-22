@@ -33,12 +33,21 @@ def yosys(script, name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--word", action="store_true", help="Preserve word-level add and sub cells")
+    parser.add_argument("--mux", action="store_true", help="Also preserve word-level muxes")
+    parser.add_argument("--compare", action="store_true", help="Also preserve word-level ordering comparisons")
     args = parser.parse_args()
     upstream = Path("/rtl/picorv32.v")
     verify = json.loads((HERE / "upstream.json").read_text())
     if hashlib.sha256(upstream.read_bytes().replace(b"\r\n", b"\n")).hexdigest() != verify["sha256_lf"]:
         raise ValueError("source does not match the pinned PicoRV32 revision")
-    mapping = "techmap t:$add t:$sub %u %n" if args.word else "techmap"
+    preserved = ["$add", "$sub"] if args.word or args.mux or args.compare else []
+    if args.mux:
+        preserved.append("$mux")
+    if args.compare:
+        preserved.extend(("$lt", "$le", "$gt", "$ge"))
+    selection = f"t:{preserved[0]}" if preserved else ""
+    selection += "".join(f" t:{kind} %u" for kind in preserved[1:])
+    mapping = f"techmap {selection} %n" if preserved else "techmap"
     yosys(f"read_verilog {upstream}; hierarchy -top {TOP} {DEFINES}; "
           f"proc; flatten; opt; memory -nomap -nordff; {mapping}; opt; write_json coarse.json",
           "extract")
@@ -63,7 +72,7 @@ def main():
                    f"  {CORE} cpu({', '.join(wiring)});\nendmodule\n")
     arithmetic = Counter(cell["type"] for cell in module["cells"].values())
     results = {"vexim_lines": len(source.splitlines()), "compile_seconds": compile_seconds,
-               "word_cells": {name: arithmetic[name] for name in ("$add", "$sub")},
+               "word_cells": {name: arithmetic[name] for name in ("$add", "$sub", "$mux", "$lt", "$le", "$gt", "$ge")},
                "seeds": {}, "ecp5": {}}
 
     for label, design, definitions in (("official", str(upstream), ["-DOFFICIAL"]),
@@ -84,11 +93,19 @@ def main():
             raise RuntimeError(f"bus trace mismatch for seed {seed}")
         print(traces[0][-1], "matching transactions:", len(traces[0])-1, flush=True)
         results["seeds"][seed] = {"summary": traces[0][-1], "transactions": len(traces[0])-1}
+    # Repeated techmap can collide with generated names in this combined profile.
+    intermediate = "read_json coarse.json"
+    if args.mux and args.compare:
+        intermediate += "; rename -enumerate"
     flows = (
         ("official", f"read_verilog -sv {upstream}; hierarchy -top {TOP} {DEFINES}"),
-        ("intermediate", "read_json coarse.json"),
+        ("intermediate", intermediate),
         ("vexim", f"read_verilog -sv {path}"),
     )
+    if args.mux and args.compare:
+        yosys("read_json coarse.json; write_verilog -noattr intermediate-sv.sv",
+              "intermediate-sv-export")
+        flows += (("intermediate-sv", "read_verilog -sv intermediate-sv.sv"),)
     for label, input_command in flows:
         yosys(f"{input_command}; synth_ecp5 -top {TOP} "
               f"-json {label}.ecp5.json; check -assert", f"{label}-ecp5")

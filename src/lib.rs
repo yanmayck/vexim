@@ -37,6 +37,7 @@ enum Operation {
     Slice(usize, u8, u8),
     Concat(usize, usize),
     Binary(&'static str, usize, usize),
+    Compare(&'static str, usize, usize, bool),
     NarrowBinary(&'static str, usize, usize, u8),
     Mux(usize, usize, usize),
     SharedBinary {
@@ -72,7 +73,10 @@ impl Operation {
             | Self::ZeroExtend(a)
             | Self::Slice(a, _, _)
             | Self::Read { address: a, .. } => vec![a],
-            Self::Binary(_, a, b) | Self::NarrowBinary(_, a, b, _) | Self::Concat(a, b) => {
+            Self::Binary(_, a, b)
+            | Self::Compare(_, a, b, _)
+            | Self::NarrowBinary(_, a, b, _)
+            | Self::Concat(a, b) => {
                 vec![a, b]
             }
             Self::Mux(select, a, b) => vec![select, a, b],
@@ -430,6 +434,21 @@ pub fn parse_with_parameters(
                 }
                 Operation::Concat(a, b)
             }
+            ["comb", _, op @ ("lt" | "le" | "gt" | "ge" | "slt" | "sle" | "sgt" | "sge"), a, b] => {
+                if width != 1 {
+                    return Err(error("comparison requires a u1 destination"));
+                }
+                let a = lookup(a)?;
+                let b = matching(b, signals[a].width)?;
+                let symbol = match op.trim_start_matches('s') {
+                    "lt" => "<",
+                    "le" => "<=",
+                    "gt" => ">",
+                    "ge" => ">=",
+                    _ => unreachable!(),
+                };
+                Operation::Compare(symbol, a, b, op.starts_with('s'))
+            }
             ["comb", _, op @ ("eq" | "ne"), a, b] => {
                 if width != 1 {
                     return Err(error("comparison requires a u1 destination"));
@@ -600,6 +619,21 @@ impl Module {
                 Operation::Concat(a, b) => known(a)
                     .zip(known(b))
                     .map(|(high, low)| (high << self.signals[b].width) | low),
+                Operation::Compare(op, a, b, signed) => known(a).zip(known(b)).map(|(x, y)| {
+                    let bias = if signed {
+                        1_u64 << (self.signals[a].width - 1)
+                    } else {
+                        0
+                    };
+                    let (x, y) = (x ^ bias, y ^ bias);
+                    u64::from(match op {
+                        "<" => x < y,
+                        "<=" => x <= y,
+                        ">" => x > y,
+                        ">=" => x >= y,
+                        _ => unreachable!(),
+                    })
+                }),
                 Operation::Binary(op, a, b) => match (op, known(a), known(b)) {
                     ("&", Some(0), _) | ("&", _, Some(0)) => Some(0),
                     ("|", Some(a), _) if a == mask => Some(mask),
@@ -915,6 +949,14 @@ impl Module {
                     writeln!(out, "  assign {target}= {{{gap}'d0, {}}};", signal(a))
                 }
                 Operation::Binary(op, a, b) => writeln!(out, "  assign {target}= {}{op} {};", signal(a), signal(b)),
+                Operation::Compare(op, a, b, signed) => {
+                    let (a, b) = (signal(a), signal(b));
+                    if signed {
+                        writeln!(out, "  assign {target}= $signed({a}) {op} $signed({b});")
+                    } else {
+                        writeln!(out, "  assign {target}= {a}{op} {b};")
+                    }
+                }
                 Operation::NarrowBinary(op, a, b, bits) => {
                     let narrow = escaped(&format!("vexim$arith{i}"));
                     writeln!(out, "  logic {}{narrow};", range(bits)).unwrap();

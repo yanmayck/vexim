@@ -234,3 +234,35 @@ end"#;
     assert!(sv.contains("logic [8:0] \\vexim$arith"));
     assert!(sv.contains("\\count <= 32'd0;"));
 }
+
+#[test]
+fn ordered_comparisons_distinguish_signed_and_unsigned_patterns() {
+    let source = r#"module ordered
+input a u8
+input b u8
+output unsigned_order u1
+output signed_order u1
+output folded_signed u1
+output folded_unsigned u1
+wire negative u8
+wire positive u8
+comb negative const 255
+comb positive const 1
+comb unsigned_order ge a b
+comb signed_order slt a b
+comb folded_signed slt negative positive
+comb folded_unsigned lt negative positive
+end"#;
+    let mut module = parse(source).unwrap();
+    module.propagate_constants();
+    let sv = module.system_verilog();
+    assert!(sv.contains("$signed(\\a ) < $signed(\\b )"));
+    assert!(sv.contains("\\a >= \\b "));
+    assert!(sv.contains("\\folded_signed = 1'd1"));
+    assert!(sv.contains("\\folded_unsigned = 1'd0"));
+    assert!(parse(&source.replace("input b u8", "input b u7"))
+        .err()
+        .unwrap()
+        .message
+        .contains("expected u8"));
+}
