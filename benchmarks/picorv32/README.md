@@ -154,3 +154,31 @@ on top of the combined profile. It passes the same three program tests
 and maps to 2,735 LUT4s, 17 more than the combined profile. The direct
 Yosys SV export of its intermediate maps to 2,556 LUT4s. This
 experiment only measures synthesis for the word-register profile.
+
+### Matched divider replacement
+
+Run the synthesis command twice with separate output directories,
+appending `--divider official` and `--divider imported`. Both modes
+preserve the divider boundary during extraction and use the combined
+arithmetic, mux and comparison profile. They generate byte-identical
+`pico.vxm` CPU shells. The wrapper connects each shell to either the
+divider from the pinned upstream RTL or the divider reconstructed in
+Vexim. Both flows flatten the complete core again during final synthesis.
+
+Both variants match the same 41 accepted bus transactions and finish on
+cycles 574, 579 and 554 under stall seeds 1, 73 and 913, respectively.
+Run `route.py vexim` for each output directory to compare timing under
+the same ECP5 harness and five place-and-route seeds. The fully flattened
+Vexim profile is a historical reference because its preprocessing also
+differs outside the divider.
+
+| Divider in the same Vexim shell | Standalone LUT4s | Median Fmax | Seeds at 75 MHz | Fmax seeds 1–5 (MHz) |
+|---|---:|---:|---:|---|
+| Upstream RTL | 2,797 | 72.73 MHz | 1/5 | 68.80, 72.73, 76.27, 73.11, 72.08 |
+| Reconstructed in Vexim | 2,719 | 76.56 MHz | 3/5 | 76.73, 76.56, 78.13, 71.93, 71.14 |
+
+The upstream divider swap adds 78 LUT4s and lowers the median by
+3.83 MHz in the matched shell. Keeping the divider boundary and
+importing it separately improves the median over the fully flattened
+reference, but this experiment does not isolate which preprocessing
+changes account for that improvement.
